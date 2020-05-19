@@ -132,7 +132,7 @@ def play_as_first_mate(network, screen):
                 print(click_pos)
                 clicked_locations = clicked_locations.union({click_pos})
 
-        draw_first_mate_screen(screen)
+        draw_first_mate_screen(screen, is_stopped)
         pygame.display.flip()
         clock.tick(FPS)
 
@@ -140,7 +140,12 @@ def play_as_first_mate(network, screen):
     pygame.quit()
     sys.exit()
 
-def draw_first_mate_screen(screen):
+def draw_first_mate_screen(screen, is_stopped):
+    if is_stopped:
+        screen.fill(black)
+        message_display(screen, "stop")
+        return
+
     # background img
     background_image = pygame.image.load('img/FirstMateCard.jpeg')
     background_image = pygame.transform.scale(background_image, (screen_width, screen_height))

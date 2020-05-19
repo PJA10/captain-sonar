@@ -3,7 +3,7 @@ from globals import *
 import math
 
 class Player:
-    def __init__(self, team, role, submarine, can_act):
+    def __init__(self, team, role, submarine, can_act=False):
         self.team = team
         self.role = role
         self.online = True
@@ -12,6 +12,9 @@ class Player:
 
     def disconnected(self):
         self.online = False
+
+    def get_state(self, game):
+        pass
 
 
 class CaptainPlayer(Player):
@@ -38,19 +41,38 @@ class CaptainPlayer(Player):
             #self.can_act = False
             self.submarine.move(target)
 
+    def get_state(self, game):
+        return CaptainState(self, game)
+
 class FirstMatePlayer(Player):
     def __init__(self, team, role, submarine):
         super().__init__(team, role, submarine, False)
         self.powers_charges = []
 
+    def get_state(self, game):
+        return FirstMateState(self, game)
+
 class CaptainState:
     def __init__(self, player, game):
         self.board_str = player.get_board_str(game)
         self.can_act = player.can_act
-        self.is_game_stopped = game.stopped
+        self.is_game_stopped = game.is_stopped
 
     def __eq__(self, other):
         return tuple(self) == tuple(other)
 
     def __iter__(self):
         yield from (self.board_str, self.can_act, self.is_game_stopped)
+
+class FirstMateState:
+    def __init__(self, player, game):
+        self.powers_charges = player.powers_charges
+        self.hp = player.submarine.hp
+        self.can_act = player.can_act
+        self.is_game_stopped = game.is_stopped
+
+    def __eq__(self, other):
+        return tuple(self) == tuple(other)
+
+    def __iter__(self):
+        yield from (self.powers_charges, self.hp, self.can_act, self.is_game_stopped)

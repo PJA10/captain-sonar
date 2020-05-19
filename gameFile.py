@@ -19,6 +19,8 @@ class Game:
         new_player = None
         if new_player_role == CAPTAIN:
             new_player = player.CaptainPlayer(new_player_team, new_player_role, self.submarines[new_player_team])
+        elif new_player_role == FIRST_MATE:
+            new_player = player.FirstMatePlayer(new_player_team, new_player_role, self.submarines[new_player_team])
         else:
             new_player = player.Player(new_player_team, new_player_role, self.submarines[new_player_team])
 

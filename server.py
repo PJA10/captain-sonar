@@ -1,6 +1,6 @@
 import time
 
-from player import CaptainState
+from player import CaptainState, FirstMateState
 from gameFile import *
 from _thread import *
 import sys, os
@@ -40,14 +40,11 @@ def threaded_client(conn, this_player_id):
                 break
         else:
             send_msg(conn, "ok")
-
             this_player = game.add_new_player(this_player_team, this_player_role)
             break
 
     reply = ""
-    client_board_str = this_player.get_board_str(game)
-    client_can_act, client_stop = this_player.can_act, game.is_stopped
-    client_powers_charges, client_hp = this_player
+    current_player_state = this_player.get_state(game)
     while this_player:
         try:
             data = recv(conn, blocking=False)
@@ -55,32 +52,30 @@ def threaded_client(conn, this_player_id):
             
                 # captain stuff
                 if data == "captain get":
-                current_player_state = CaptainState(this_player, game)
+                    current_player_state = this_player.get_state(game)
 
-            elif data == "captain clicked loc":
-                target_clicked = recv(conn)
-                this_player.clicked(game, target_clicked)
-                current_player_state = CaptainState(this_player, game)
+                elif data == "captain clicked loc":
+                    target_clicked = recv(conn)
+                    this_player.clicked(game, target_clicked)
+                    current_player_state = this_player.get_state(game)
 
-            elif data == "captain stop":
-                game.stopped = True
-                current_player_state = CaptainState(this_player, game)
+                elif data == "captain stop":
+                    game.is_stopped = True
+                    current_player_state = this_player.get_state(game)
 
-                # first mate stuff
+                    # first mate stuff
                 elif data == "first mate get":
-                    reply = this_player.powers_charges, this_player.submarine.hp, this_player.can_act, game.is_stopped
-                    client_powers_charges, client_hp, client_can_act, client_stop
+                    current_player_state = this_player.get_state(game)
 
-            send_msg(conn, tuple(current_player_state))
+                send_msg(conn, tuple(current_player_state))
 
-            if this_player_role == CAPTAIN:
-                    if CaptainState(this_player, game) != current_player_state:
-                        send_msg(conn, "sending game state")
-                        send_msg(conn, (this_player.get_board_str(game), this_player.can_act, game.stopped))
-                        current_player_state = CaptainState(this_player, game)
 
-            if this_player_role == FIRST_MATE:
-                pass
+            # update client for the new state if needed
+            if this_player.get_state(game) != current_player_state:
+                send_msg(conn, "sending game state")
+                current_player_state = this_player.get_state(game)
+                send_msg(conn, tuple(current_player_state))
+
             #time.sleep(1)
 
         except Exception as e:
