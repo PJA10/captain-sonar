@@ -16,7 +16,6 @@ def set_my_team(team_title, selcted_team):
     global my_team
     my_team = selcted_team
 
-
 def play_as_captain():
     global server_str_board, server_can_act, server_is_stopped
     clock = pygame.time.Clock()
@@ -29,7 +28,7 @@ def play_as_captain():
     except Exception as e:
         print(e)
 
-
+    stop_button = pygame.Rect(4*screen_width//5, screen_width//3, 200, 200)
     while game_states != "exit":
         #last_iteration_str_board = str_board
         got = network.listen(blocking=False)
@@ -37,23 +36,23 @@ def play_as_captain():
             if got == "sending game state":
                 str_board, can_act, is_stopped = network.listen()
 
-
+        screen.fill(white)
         clicked_locations = set()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 game_states = "exit"
 
             if event.type == pygame.MOUSEBUTTONUP:
-                click_pos = pygame.mouse.get_pos()
+                click_pos = event.pos
                 print(click_pos)
-                # switch 0,1 because (x,y) == (col,row)
                 clicked_locations = clicked_locations.union({click_pos})
+
         if can_act:
             target_clicked = None
             for loc_clicked in clicked_locations:
                 for i in range(board_height):
                     for j in range(board_width):
-                        if math.hypot(int(126 + 51.7 * j) - loc_clicked[0], int(109 + 44.9 * i) - loc_clicked[1]) < 12:
+                        if math.hypot(int(0.0984375*screen_width + 0.040390625*screen_width * j) - loc_clicked[0], int(0.13625*screen_height + 0.056125*screen_height * i) - loc_clicked[1]) <  int(0.00576923077*(screen_height+screen_width)):
                             if str_board[board_height*i + j] == "y":
                                 target_clicked = (i,j)
                                 break
@@ -63,6 +62,7 @@ def play_as_captain():
                 else:
                     continue
                 break
+                # (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
 
             if target_clicked:
                 network.only_send("captain clicked loc")
@@ -70,7 +70,13 @@ def play_as_captain():
                 print(result)
                 str_board, can_act, is_stopped = result
 
-        draw_captain_screen(screen, str_board, is_stopped)
+        for loc_clicked in clicked_locations:
+            if not is_stopped and stop_button.collidepoint(loc_clicked):
+                result = network.send("captain stop")
+                print(result)
+                str_board, can_act, is_stopped = result
+
+        draw_captain_screen(screen, str_board, is_stopped, stop_button)
         pygame.display.flip()
         clock.tick(FPS)
 
@@ -79,9 +85,10 @@ def play_as_captain():
     sys.exit()
 
 
-def draw_captain_screen(screen, str_board, is_stopped):
-    screen.fill(white)
+def draw_captain_screen(screen, str_board, is_stopped, stop_button):
     if is_stopped:
+        screen.fill(black)
+        message_display(screen, "stop")
         return
     #background img
     background_image = pygame.image.load('../img/AlphaMap2.jpeg')
@@ -90,25 +97,28 @@ def draw_captain_screen(screen, str_board, is_stopped):
     background_image_rect.left, background_image_rect.top = [0,0]
     screen.blit(background_image, background_image_rect)
 
+    pygame.draw.rect(screen, white, stop_button)  # draw button
+
     for i in range(board_height):
         for j in range(board_width):
             c = str_board[i*board_height + j]
             if c:
                 if c == "r":
                     color = red
-                    pygame.draw.circle(screen, color, (int(126 + 51.7 * j), int(109 + 44.9 * i)), 12)
+                    pygame.draw.circle(screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
                 elif c == "b":
                     color = black
-                    pygame.draw.circle(screen, color, (int(126 + 51.7 * j), int(109 + 44.9 * i)), 12)
+                    pygame.draw.circle(screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height* i)), int(0.00576923077*(screen_height+screen_width)))
                 elif c == "y":
                     color = yellow
-                    pygame.draw.circle(screen, color, (int(126 + 51.7 * j), int(109 + 44.9 * i)), 12)
+                    pygame.draw.circle(screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
 
 
 def start_the_game():
     try:
         if my_role == CAPTAIN:
             play_as_captain()
+
     except Exception as e:
         network.close()
         raise e

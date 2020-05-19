@@ -15,7 +15,7 @@ class Player:
 class CaptainPlayer(Player):
     def __init__(self, team, role, submarine):
         super().__init__(team, role, submarine)
-        self.can_act = False
+        self.can_act = True
 
     def get_board_str(self, game):
         board_str = ""
@@ -25,7 +25,7 @@ class CaptainPlayer(Player):
                     board_str += "b" # submarine location is marked b for black
                 elif (i, j) in self.submarine.path:
                     board_str += "r"  # submarine past locations are marked r for red
-                elif gameFile.Game.in_map((i, j)) and not game.board[i][j].is_island and (i, j) not in self.submarine.path and math.hypot(i - self.submarine.loc[0], j - self.submarine.loc[1]) == 1:
+                elif self.can_act and gameFile.Game.in_map((i, j)) and not game.board[i][j].is_island and (i, j) not in self.submarine.path and math.hypot(i - self.submarine.loc[0], j - self.submarine.loc[1]) == 1:
                     board_str += "y"  # possible move loc marked y for yellow
                 else:
                     board_str += "w" # white for nothing

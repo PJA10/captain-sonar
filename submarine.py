@@ -15,5 +15,3 @@ class Submarine:
     def move(self, game, target):
         self.loc = target
         self.path.append(target)
-        if len(self.path) == 4:
-            game.stopped = True

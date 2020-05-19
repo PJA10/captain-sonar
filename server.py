@@ -46,28 +46,32 @@ def threaded_client(conn, this_player_id):
     reply = ""
     while this_player:
         try:
-            client_board_str, client_can_act, client_stop = this_player.get_board_str(game), True, False
+            client_board_str, client_can_act, client_stop = this_player.get_board_str(game), this_player.can_act, game.stopped
             while True:
                 data = recv(conn, blocking=False)
                 if data:
                     break
                 if this_player_role == CAPTAIN:
-                    if (this_player.get_board_str(game), True, game.stopped) != (client_board_str, client_can_act, client_stop):
+                    if (this_player.get_board_str(game), this_player.can_act, game.stopped) != (client_board_str, client_can_act, client_stop):
                         send_msg(conn, "sending game state")
-                        send_msg(conn, (this_player.get_board_str(game), True, False))
-                        client_board_str, client_can_act, client_stop = this_player.get_board_str(game), True, False
+                        send_msg(conn, (this_player.get_board_str(game), this_player.can_act, game.stopped))
+                        client_board_str, client_can_act, client_stop = this_player.get_board_str(game), this_player.can_act, game.stopped
                 #time.sleep(1)
 
             if data == "captain get":
-                reply = this_player.get_board_str(game), True, False
-                client_board_str, client_can_act, client_stop = this_player.get_board_str(game), True, False
+                reply = this_player.get_board_str(game), this_player.can_act, game.stopped
+                client_board_str, client_can_act, client_stop = this_player.get_board_str(game), this_player.can_act, game.stopped
 
             elif data == "captain clicked loc":
                 target_clicked = recv(conn)
                 this_player.clicked(game, target_clicked)
-                #send_msg(conn, "sending game state")
-                reply = this_player.get_board_str(game), True, False
-                client_board_str, client_can_act, client_stop = this_player.get_board_str(game), True, False
+                reply = this_player.get_board_str(game), this_player.can_act, game.stopped
+                client_board_str, client_can_act, client_stop = this_player.get_board_str(game), this_player.can_act, game.stopped
+
+            elif data == "captain stop":
+                game.stopped = True
+                reply = this_player.get_board_str(game), this_player.can_act, game.stopped
+
 
             send_msg(conn, reply)
         except Exception as e:

@@ -19,6 +19,8 @@ class Game:
         new_player = None
         if new_player_role == CAPTAIN:
             new_player = player.CaptainPlayer(new_player_team, new_player_role, self.submarines[new_player_team])
+        else:
+            new_player = player.Player(new_player_team, new_player_role, self.submarines[new_player_team])
 
         self.players.append(new_player)
         return new_player

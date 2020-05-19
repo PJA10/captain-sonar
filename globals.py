@@ -1,5 +1,5 @@
 
-screen_height = 800
+screen_height = 720
 screen_width = 1280
 
 white = (255,255,255)
