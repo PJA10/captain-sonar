@@ -7,14 +7,7 @@ from globals import *
 import pygame_menu
 import math
 
-def set_my_role(role_title, selcted_role):
-    global my_role
-    my_role = selcted_role
 
-
-def set_my_team(team_title, selcted_team):
-    global my_team
-    my_team = selcted_team
 
 def play_as_captain(network, screen, my_pick):
     my_team, my_role = my_pick
@@ -188,7 +181,8 @@ def choose_team(network, my_pick):
         return True
 
 
-def try_start_game(network, screen, my_pick, start_game_menu):
+def try_start_game(network, screen, my_picking_selectors, start_game_menu):
+    my_pick = (my_picking_selectors[0].get_value()[1], my_picking_selectors[1].get_value()[1])
     choose_team_result = choose_team(network, my_pick)
     if choose_team_result:
         start_the_game(network, screen, my_pick)
@@ -210,10 +204,10 @@ def main():
         try_again_menu.mainloop(screen)
 
     start_game_menu = pygame_menu.Menu(300, 400, 'Welcome', theme=pygame_menu.themes.THEME_BLUE)
-    start_game_menu.add_selector('Team :', [('blue', BLUE_TEAM), ('yellow', YELLOW_TEAM)], onchange=set_my_team)
-    start_game_menu.add_selector('Role :', [('captain', CAPTAIN), ('first mate', FIRST_MATE), ('engineer', ENGINEER),
-                                            ('radio operator', RADIO_OPERATOR)], onchange=set_my_role)
-    start_game_menu.add_button('Play', try_start_game, network, screen,(my_team, my_role), start_game_menu)
+    team_selector = start_game_menu.add_selector('Team :', [('blue', BLUE_TEAM), ('yellow', YELLOW_TEAM)])
+    role_selector = start_game_menu.add_selector('Role :', [('captain', CAPTAIN), ('first mate', FIRST_MATE), ('engineer', ENGINEER),
+                                            ('radio operator', RADIO_OPERATOR)])
+    start_game_menu.add_button('Play', try_start_game, network, screen, (team_selector, role_selector), start_game_menu)
     start_game_menu.add_button('Quit', pygame_menu.events.EXIT)
 
     start_game_menu.mainloop(screen)
