@@ -49,10 +49,9 @@ def play_as_captain(network, screen):
     except Exception as e:
         print(e)
 
-    stop_button = pygame.Rect(4*screen_width//5, screen_width//3, 200, 200)
+    stop_button = pygame.Rect(4*screen_width//5, screen_height//2, 150, 150) # stop_button pos
 
     while game_states != "exit":
-
         # check for update from server
         got = network.listen(blocking=False)
         if got:
@@ -66,9 +65,8 @@ def play_as_captain(network, screen):
                 game_states = "exit"
 
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                click_pos = event.pos
-                print(click_pos)
-                clicked_locations = clicked_locations.union({click_pos})
+                clicked_locations = clicked_locations.union({event.pos}) # add curr pos to the set
+                print(event.pos) # debug
 
         # logic
         if can_act:
@@ -91,18 +89,18 @@ def play_as_captain(network, screen):
 
 def draw_captain_screen(screen, str_board, is_stopped, stop_button):
     if is_stopped:
-        screen.fill(black)
-        message_display(screen, "stop")
+        draw_stop_screen(screen)
         return
-    #background img
-    background_image = pygame.image.load('img/AlphaMap2.jpeg')
-    background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
-    background_image_rect = background_image.get_rect()
-    background_image_rect.left, background_image_rect.top = [0,0]
-    screen.blit(background_image, background_image_rect)
 
-    pygame.draw.rect(screen, white, stop_button)  # draw button
+    draw_bg_img(screen, 'img/AlphaMap2.jpeg')
 
+    pygame.draw.rect(screen, black, stop_button)  # draw button
+    message_display(screen, "stop", stop_button.x+stop_button.width//2, stop_button.y+stop_button.height//2, stop_button.width//3)
+
+    draw_captain_str_board(screen, str_board)
+
+
+def draw_captain_str_board(screen, str_board):
     for i in range(board_height):
         for j in range(board_width):
             c = str_board[i*board_height + j]
@@ -117,6 +115,7 @@ def draw_captain_screen(screen, str_board, is_stopped, stop_button):
                     color = yellow
                     pygame.draw.circle(screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
 
+
 def play_as_first_mate(network, screen):
     clock = pygame.time.Clock()
     FPS = 60
@@ -130,21 +129,23 @@ def play_as_first_mate(network, screen):
 
 
     while game_states != "exit":
+        # check for update from server
         got = network.listen(blocking=False)
         if got:
             if got == "sending game state":
                 powers_charges, hp, can_act, is_stopped = network.listen()
 
+        # collect pygame events
         clicked_locations = set()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 game_states = "exit"
 
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                click_pos = event.pos
-                print(click_pos)
-                clicked_locations = clicked_locations.union({click_pos})
+                clicked_locations = clicked_locations.union({event.pos})
+                print(event.pos)
 
+        # draw
         draw_first_mate_screen(screen, is_stopped)
         pygame.display.flip()
         clock.tick(FPS)
@@ -153,18 +154,15 @@ def play_as_first_mate(network, screen):
     pygame.quit()
     sys.exit()
 
+
 def draw_first_mate_screen(screen, is_stopped):
     if is_stopped:
         screen.fill(black)
         message_display(screen, "stop")
         return
 
-    # background img
-    background_image = pygame.image.load('img/FirstMateCard.jpeg')
-    background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
-    background_image_rect = background_image.get_rect()
-    background_image_rect.left, background_image_rect.top = [0, 0]
-    screen.blit(background_image, background_image_rect)
+    draw_bg_img(screen, 'img/FirstMateCard.jpeg')
+
 
 def start_the_game(network, screen, my_pick):
     try:
@@ -179,15 +177,30 @@ def start_the_game(network, screen, my_pick):
         raise e
 
 
+def draw_bg_img(screen, img):
+    background_image = pygame.image.load(img)
+    background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
+    background_image_rect = background_image.get_rect()
+    background_image_rect.left, background_image_rect.top = [0, 0]
+    screen.blit(background_image, background_image_rect)
+
+
+def draw_stop_screen(screen):
+    screen.fill(black)
+    message_display(screen, "stop")
+
+
 def text_objects(text, font):
     text_surface = font.render(text, True, white)
     return text_surface, text_surface.get_rect()
+
 
 def message_display(screen, text, x=screen_width / 2, y=screen_height / 2, size=100):
     large_text = pygame.font.SysFont('comicsansms', size)
     text_surf, text_rect = text_objects(text, large_text)
     text_rect.center = (x, y)
     screen.blit(text_surf, text_rect)
+
 
 def choose_team(network, my_pick):
     server_respond = network.send(my_pick)
@@ -203,7 +216,6 @@ def try_start_game(network, screen, my_picking_selectors, start_game_menu):
     else:
         if not start_game_menu.get_widget("role taken"):
             start_game_menu.add_label("role taken", "role taken")
-
 
 
 def main():
