@@ -7,7 +7,7 @@ class Game:
         self.players = []
         self.submarines = [submarine.Submarine(BLUE_TEAM), submarine.Submarine(YELLOW_TEAM)]
         self.board = []
-        self.stopped = False
+        self.is_stopped = False
         for row in range(board_height):
             curr_row = []
             for col in  range(board_width):

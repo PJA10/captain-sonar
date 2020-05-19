@@ -44,7 +44,9 @@ def threaded_client(conn, this_player_id):
             break
 
     reply = ""
-    client_board_str, client_can_act, client_stop = this_player.get_board_str(game), this_player.can_act, game.stopped
+    client_board_str = this_player.get_board_str(game)
+    client_can_act, client_stop = this_player.can_act, game.is_stopped
+    client_powers_charges, client_hp = this_player
     while this_player:
         try:
             data = recv(conn, blocking=False)
@@ -52,30 +54,36 @@ def threaded_client(conn, this_player_id):
 
                 # captain stuff
                 if data == "captain get":
-                    reply = this_player.get_board_str(game), this_player.can_act, game.stopped
+                    reply = this_player.get_board_str(game), this_player.can_act, game.is_stopped
                     client_board_str, client_can_act, client_stop = this_player.get_board_str(
-                        game), this_player.can_act, game.stopped
+                        game), this_player.can_act, game.is_stopped
 
                 elif data == "captain clicked loc":
                     target_clicked = recv(conn)
                     this_player.clicked(game, target_clicked)
-                    reply = this_player.get_board_str(game), this_player.can_act, game.stopped
+                    reply = this_player.get_board_str(game), this_player.can_act, game.is_stopped
                     client_board_str, client_can_act, client_stop = this_player.get_board_str(
-                        game), this_player.can_act, game.stopped
+                        game), this_player.can_act, game.is_stopped
 
                 elif data == "captain stop":
-                    game.stopped = True
-                    reply = this_player.get_board_str(game), this_player.can_act, game.stopped
+                    game.is_stopped = True
+                    reply = this_player.get_board_str(game), this_player.can_act, game.is_stopped
 
-                # elif data ==
+                # first mate stuff
+                elif data == "first mate get":
+                    reply = this_player.powers_charges, this_player.submarine.hp, this_player.can_act, game.is_stopped
+                    client_powers_charges, client_hp, client_can_act, client_stop
 
                 send_msg(conn, reply)
 
             if this_player_role == CAPTAIN:
-                if (this_player.get_board_str(game), this_player.can_act, game.stopped) != (client_board_str, client_can_act, client_stop):
+                if (this_player.get_board_str(game), this_player.can_act, game.is_stopped) != (client_board_str, client_can_act, client_stop):
                     send_msg(conn, "sending game state")
-                    send_msg(conn, (this_player.get_board_str(game), this_player.can_act, game.stopped))
-                    client_board_str, client_can_act, client_stop = this_player.get_board_str(game), this_player.can_act, game.stopped
+                    send_msg(conn, (this_player.get_board_str(game), this_player.can_act, game.is_stopped))
+                    client_board_str, client_can_act, client_stop = this_player.get_board_str(game), this_player.can_act, game.is_stopped
+
+            if this_player_role == FIRST_MATE:
+                pass
             #time.sleep(1)
 
 

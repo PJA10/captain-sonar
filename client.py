@@ -9,8 +9,7 @@ import math
 
 
 
-def play_as_captain(network, screen, my_pick):
-    my_team, my_role = my_pick
+def play_as_captain(network, screen):
     clock = pygame.time.Clock()
     FPS = 60
     screen.fill(blue)
@@ -55,7 +54,6 @@ def play_as_captain(network, screen, my_pick):
                 else:
                     continue
                 break
-                # (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
 
             if target_clicked:
                 network.only_send("captain clicked loc")
@@ -106,25 +104,23 @@ def draw_captain_screen(screen, str_board, is_stopped, stop_button):
                     color = yellow
                     pygame.draw.circle(screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
 
-def play_as_first_mate(network, screen, my_pick):
-    my_team, my_role = my_pick
+def play_as_first_mate(network, screen):
     clock = pygame.time.Clock()
     FPS = 60
     screen.fill(blue)
     game_states = "play"
 
     try:
-         #powers_charge, hp, can_act, is_stopped = network.send("first mate get")
-        pass
+        powers_charges, hp, can_act, is_stopped= network.send("first mate get")
     except Exception as e:
         print(e)
 
 
     while game_states != "exit":
-        #got = network.listen(blocking=False)
-        #if got:
-        #    if got == "sending game state":
-        #        powers_charge, hp, can_act, is_stopped = network.listen()
+        got = network.listen(blocking=False)
+        if got:
+            if got == "sending game state":
+                powers_charges, hp, can_act, is_stopped = network.listen()
 
         clicked_locations = set()
         for event in pygame.event.get():
@@ -156,9 +152,9 @@ def start_the_game(network, screen, my_pick):
     try:
         my_role = my_pick[1]
         if my_role == CAPTAIN:
-            play_as_captain(network, screen, my_pick)
+            play_as_captain(network, screen)
         elif my_role == FIRST_MATE:
-            play_as_first_mate(network, screen, my_pick)
+            play_as_first_mate(network, screen)
 
     except Exception as e:
         network.close()
