@@ -33,7 +33,7 @@ class CaptainPlayer(Player):
 
     def clicked(self, game, target):
         if gameFile.Game.in_map(target) and not game.board[target[0]][target[1]].is_island and target not in self.submarine.path and math.hypot(target[0] - self.submarine.loc[0], target[1] - self.submarine.loc[1]) == 1:
-            self.can_act = False
+            #self.can_act = False
             self.submarine.move(game, target)
 
 

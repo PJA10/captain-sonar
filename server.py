@@ -58,6 +58,7 @@ def threaded_client(conn, this_player_id):
                         client_board_str, client_can_act, client_stop = this_player.get_board_str(game), this_player.can_act, game.stopped
                 #time.sleep(1)
 
+            #captain stuff
             if data == "captain get":
                 reply = this_player.get_board_str(game), this_player.can_act, game.stopped
                 client_board_str, client_can_act, client_stop = this_player.get_board_str(game), this_player.can_act, game.stopped
@@ -71,6 +72,9 @@ def threaded_client(conn, this_player_id):
             elif data == "captain stop":
                 game.stopped = True
                 reply = this_player.get_board_str(game), this_player.can_act, game.stopped
+
+
+            #elif data ==
 
 
             send_msg(conn, reply)
