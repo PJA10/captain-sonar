@@ -7,16 +7,9 @@ from globals import *
 import pygame_menu
 import math
 
-def set_my_role(role_title, selcted_role):
-    global my_role
-    my_role = selcted_role
 
 
-def set_my_team(team_title, selcted_team):
-    global my_team
-    my_team = selcted_team
-
-def play_as_captain():
+def play_as_captain(network, screen):
     clock = pygame.time.Clock()
     FPS = 60
     screen.fill(blue)
@@ -61,7 +54,6 @@ def play_as_captain():
                 else:
                     continue
                 break
-                # (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
 
             if target_clicked:
                 network.only_send("captain clicked loc")
@@ -112,24 +104,23 @@ def draw_captain_screen(screen, str_board, is_stopped, stop_button):
                     color = yellow
                     pygame.draw.circle(screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
 
-def play_as_first_mate():
+def play_as_first_mate(network, screen):
     clock = pygame.time.Clock()
     FPS = 60
     screen.fill(blue)
     game_states = "play"
 
     try:
-         #powers_charge, hp, can_act, is_stopped = network.send("first mate get")
-        pass
+        powers_charges, hp, can_act, is_stopped= network.send("first mate get")
     except Exception as e:
         print(e)
 
 
     while game_states != "exit":
-        #got = network.listen(blocking=False)
-        #if got:
-        #    if got == "sending game state":
-        #        powers_charge, hp, can_act, is_stopped = network.listen()
+        got = network.listen(blocking=False)
+        if got:
+            if got == "sending game state":
+                powers_charges, hp, can_act, is_stopped = network.listen()
 
         clicked_locations = set()
         for event in pygame.event.get():
@@ -157,12 +148,13 @@ def draw_first_mate_screen(screen):
     background_image_rect.left, background_image_rect.top = [0, 0]
     screen.blit(background_image, background_image_rect)
 
-def start_the_game():
+def start_the_game(network, screen, my_pick):
     try:
+        my_role = my_pick[1]
         if my_role == CAPTAIN:
-            play_as_captain()
+            play_as_captain(network, screen)
         elif my_role == FIRST_MATE:
-            play_as_first_mate()
+            play_as_first_mate(network, screen)
 
     except Exception as e:
         network.close()
@@ -179,34 +171,27 @@ def message_display(screen, text, x=screen_width / 2, y=screen_height / 2, size=
     text_rect.center = (x, y)
     screen.blit(text_surf, text_rect)
 
-def choose_team():
-    server_respond = network.send((my_team, my_role))
+def choose_team(network, my_pick):
+    server_respond = network.send(my_pick)
     if server_respond == "ok":
         return True
 
 
-def try_start_game():
-    global start_game_menu
-    choose_team_result = choose_team()
+def try_start_game(network, screen, my_picking_selectors, start_game_menu):
+    my_pick = (my_picking_selectors[0].get_value()[1], my_picking_selectors[1].get_value()[1])
+    choose_team_result = choose_team(network, my_pick)
     if choose_team_result:
-        start_the_game()
+        start_the_game(network, screen, my_pick)
     else:
         if not start_game_menu.get_widget("role taken"):
             start_game_menu.add_label("role taken", "role taken")
 
 
 
-my_role = CAPTAIN
-my_team = BLUE_TEAM
-start_game_menu = None
-network = None
-screen = None
-
 def main():
-    global screen, network, start_game_menu, my_team, my_role
     pygame.init()
     screen = pygame.display.set_mode((screen_width, screen_height))
-
+    my_team, my_role = BLUE_TEAM, CAPTAIN
     try:
         network = Network()
     except:
@@ -215,10 +200,10 @@ def main():
         try_again_menu.mainloop(screen)
 
     start_game_menu = pygame_menu.Menu(300, 400, 'Welcome', theme=pygame_menu.themes.THEME_BLUE)
-    start_game_menu.add_selector('Team :', [('blue', BLUE_TEAM), ('yellow', YELLOW_TEAM)], onchange=set_my_team)
-    start_game_menu.add_selector('Role :', [('captain', CAPTAIN), ('first mate', FIRST_MATE), ('engineer', ENGINEER),
-                                            ('radio operator', RADIO_OPERATOR)], onchange=set_my_role)
-    start_game_menu.add_button('Play', try_start_game)
+    team_selector = start_game_menu.add_selector('Team :', [('blue', BLUE_TEAM), ('yellow', YELLOW_TEAM)])
+    role_selector = start_game_menu.add_selector('Role :', [('captain', CAPTAIN), ('first mate', FIRST_MATE), ('engineer', ENGINEER),
+                                            ('radio operator', RADIO_OPERATOR)])
+    start_game_menu.add_button('Play', try_start_game, network, screen, (team_selector, role_selector), start_game_menu)
     start_game_menu.add_button('Quit', pygame_menu.events.EXIT)
 
     start_game_menu.mainloop(screen)

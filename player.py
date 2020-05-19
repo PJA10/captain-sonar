@@ -3,19 +3,21 @@ from globals import *
 import math
 
 class Player:
-    def __init__(self, team, role, submarine):
+    def __init__(self, team, role, submarine, can_act):
         self.team = team
         self.role = role
         self.online = True
         self.submarine = submarine
+        self.can_act = can_act
 
     def disconnected(self):
         self.online = False
 
+
 class CaptainPlayer(Player):
     def __init__(self, team, role, submarine):
-        super().__init__(team, role, submarine)
-        self.can_act = True
+        super().__init__(team, role, submarine, True)
+
 
     def get_board_str(self, game):
         board_str = ""
@@ -34,7 +36,12 @@ class CaptainPlayer(Player):
     def clicked(self, game, target):
         if gameFile.Game.in_map(target) and not game.board[target[0]][target[1]].is_island and target not in self.submarine.path and math.hypot(target[0] - self.submarine.loc[0], target[1] - self.submarine.loc[1]) == 1:
             #self.can_act = False
-            self.submarine.move(game, target)
+            self.submarine.move(target)
+
+class FirstMatePlayer(Player):
+    def __init__(self, team, role, submarine):
+        super().__init__(team, role, submarine, False)
+        self.powers_charges = []
 
 class CaptainState:
     def __init__(self, player, game):

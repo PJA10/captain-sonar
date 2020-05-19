@@ -45,21 +45,16 @@ def threaded_client(conn, this_player_id):
             break
 
     reply = ""
+    client_board_str = this_player.get_board_str(game)
+    client_can_act, client_stop = this_player.can_act, game.is_stopped
+    client_powers_charges, client_hp = this_player
     while this_player:
         try:
-            current_player_state = CaptainState(this_player, game)
-            while True:
-                data = recv(conn, blocking=False)
-                if data:
-                    break
-                if this_player_role == CAPTAIN:
-                    if CaptainState(this_player, game) != current_player_state:
-                        send_msg(conn, "sending game state")
-                        send_msg(conn, (this_player.get_board_str(game), this_player.can_act, game.stopped))
-                        current_player_state = CaptainState(this_player, game)
-
-            #captain stuff
-            if data == "captain get":
+            data = recv(conn, blocking=False)
+            if data:
+            
+                # captain stuff
+                if data == "captain get":
                 current_player_state = CaptainState(this_player, game)
 
             elif data == "captain clicked loc":
@@ -71,7 +66,22 @@ def threaded_client(conn, this_player_id):
                 game.stopped = True
                 current_player_state = CaptainState(this_player, game)
 
+                # first mate stuff
+                elif data == "first mate get":
+                    reply = this_player.powers_charges, this_player.submarine.hp, this_player.can_act, game.is_stopped
+                    client_powers_charges, client_hp, client_can_act, client_stop
+
             send_msg(conn, tuple(current_player_state))
+
+            if this_player_role == CAPTAIN:
+                    if CaptainState(this_player, game) != current_player_state:
+                        send_msg(conn, "sending game state")
+                        send_msg(conn, (this_player.get_board_str(game), this_player.can_act, game.stopped))
+                        current_player_state = CaptainState(this_player, game)
+
+            if this_player_role == FIRST_MATE:
+                pass
+            #time.sleep(1)
 
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
