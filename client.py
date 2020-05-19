@@ -8,6 +8,35 @@ import pygame_menu
 import math
 
 
+def detect_target_clicked(clicked_locations, str_board):
+    target_clicked = None
+    for loc_clicked in clicked_locations:
+        for i in range(board_height):
+            for j in range(board_width):
+                if math.hypot(int(0.0984375 * screen_width + 0.040390625 * screen_width * j) - loc_clicked[0],
+                              int(0.13625 * screen_height + 0.056125 * screen_height * i) - loc_clicked[1]) < int(
+                        0.00576923077 * (screen_height + screen_width)):
+                    if str_board[board_height * i + j] == "y":
+                        target_clicked = (i, j)
+                        break
+            else:
+                continue
+            break
+        else:
+            continue
+        break
+    return target_clicked
+
+def send_to_server_target_clicked(network, target_clicked):
+    network.only_send("captain clicked loc")
+    return network.send(target_clicked)
+
+
+def detect_button_clicked(button, clicked_locations):
+    for loc_clicked in clicked_locations:
+        if button.collidepoint(loc_clicked):
+            return True
+    return False
 
 def play_as_captain(network, screen):
     clock = pygame.time.Clock()
@@ -21,6 +50,7 @@ def play_as_captain(network, screen):
         print(e)
 
     stop_button = pygame.Rect(4*screen_width//5, screen_width//3, 200, 200)
+
     while game_states != "exit":
         #last_iteration_str_board = str_board
         got = network.listen(blocking=False)
@@ -40,32 +70,12 @@ def play_as_captain(network, screen):
                 clicked_locations = clicked_locations.union({click_pos})
 
         if can_act:
-            target_clicked = None
-            for loc_clicked in clicked_locations:
-                for i in range(board_height):
-                    for j in range(board_width):
-                        if math.hypot(int(0.0984375*screen_width + 0.040390625*screen_width * j) - loc_clicked[0], int(0.13625*screen_height + 0.056125*screen_height * i) - loc_clicked[1]) <  int(0.00576923077*(screen_height+screen_width)):
-                            if str_board[board_height*i + j] == "y":
-                                target_clicked = (i,j)
-                                break
-                    else:
-                        continue
-                    break
-                else:
-                    continue
-                break
-
+            target_clicked = detect_target_clicked(clicked_locations, str_board)
             if target_clicked:
-                network.only_send("captain clicked loc")
-                result = network.send(target_clicked)
-                print(result)
-                str_board, can_act, is_stopped = result
+                str_board, can_act, is_stopped = send_to_server_target_clicked(network, target_clicked)
 
-        for loc_clicked in clicked_locations:
-            if not is_stopped and stop_button.collidepoint(loc_clicked):
-                result = network.send("captain stop")
-                print(result)
-                str_board, can_act, is_stopped = result
+        if not is_stopped and detect_button_clicked(stop_button, clicked_locations):
+            str_board, can_act, is_stopped = network.send("captain stop")
 
         draw_captain_screen(screen, str_board, is_stopped, stop_button)
         pygame.display.flip()

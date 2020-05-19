@@ -18,20 +18,15 @@ class Network:
 
     def send(self, data):
         try:
-            #print(msg)
-            #print(pickle.loads(msg))
             send_msg(self.client, data)
             got = self.listen()
-            #print('got:', got)
-            #print(pickle.loads(got))
+            print('got:', got)
             return got
         except socket.error as e:
             print(e)
 
     def only_send(self, data):
         try:
-            #print(msg)
-            #print(pickle.loads(msg))
             send_msg(self.client, data)
 
         except socket.error as e:
