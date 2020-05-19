@@ -36,4 +36,14 @@ class CaptainPlayer(Player):
             #self.can_act = False
             self.submarine.move(game, target)
 
+class CaptainState:
+    def __init__(self, player, game):
+        self.board_str = player.get_board_str(game)
+        self.can_act = player.can_act
+        self.is_game_stopped = game.stopped
 
+    def __eq__(self, other):
+        return tuple(self) == tuple(other)
+
+    def __iter__(self):
+        yield from (self.board_str, self.can_act, self.is_game_stopped)
