@@ -151,7 +151,7 @@ def play_as_first_mate(network, screen):
 
         #logic
         if can_act:
-            power_clicked = detect_power_clicked(powers_rects, clicked_locations)
+            power_clicked = detect_power_clicked(powers_rects[:len(powers_charges)], clicked_locations)
             if power_clicked:
                 powers_charges, hp, can_act, is_stopped = send_to_server_user_actions(network, "first mate clicked power", powers_rects.index(power_clicked))
                 # power clicked is sent to the server as the index of the power in powerActionsList witch is the same as powers_rects
