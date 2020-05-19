@@ -52,13 +52,14 @@ def play_as_captain(network, screen):
     stop_button = pygame.Rect(4*screen_width//5, screen_width//3, 200, 200)
 
     while game_states != "exit":
-        #last_iteration_str_board = str_board
+
+        # check for update from server
         got = network.listen(blocking=False)
         if got:
             if got == "sending game state":
                 str_board, can_act, is_stopped = network.listen()
 
-        screen.fill(white)
+        # collect pygame events
         clicked_locations = set()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -69,6 +70,7 @@ def play_as_captain(network, screen):
                 print(click_pos)
                 clicked_locations = clicked_locations.union({click_pos})
 
+        # logic
         if can_act:
             target_clicked = detect_target_clicked(clicked_locations, str_board)
             if target_clicked:
@@ -77,6 +79,7 @@ def play_as_captain(network, screen):
         if not is_stopped and detect_button_clicked(stop_button, clicked_locations):
             str_board, can_act, is_stopped = network.send("captain stop")
 
+        # draw
         draw_captain_screen(screen, str_board, is_stopped, stop_button)
         pygame.display.flip()
         clock.tick(FPS)
