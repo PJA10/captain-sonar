@@ -12,6 +12,6 @@ class Submarine:
         self.hp = 4
         self.team = team
 
-    def move(self, game, target):
+    def move(self, target):
         self.loc = target
         self.path.append(target)
