@@ -43,4 +43,14 @@ class FirstMatePlayer(Player):
         super().__init__(team, role, submarine, False)
         self.powers_charges = []
 
+class CaptainState:
+    def __init__(self, player, game):
+        self.board_str = player.get_board_str(game)
+        self.can_act = player.can_act
+        self.is_game_stopped = game.stopped
 
+    def __eq__(self, other):
+        return tuple(self) == tuple(other)
+
+    def __iter__(self):
+        yield from (self.board_str, self.can_act, self.is_game_stopped)
