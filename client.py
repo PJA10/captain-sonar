@@ -6,7 +6,7 @@ from network import Network
 from globals import *
 import pygame_menu
 import math
-
+from pygame import gfxdraw
 
 def detect_target_clicked(clicked_locations, str_board):
     target_clicked = None
@@ -27,14 +27,14 @@ def detect_target_clicked(clicked_locations, str_board):
         break
     return target_clicked
 
-def send_to_server_target_clicked(network, target_clicked):
-    network.only_send("captain clicked loc")
-    return network.send(target_clicked)
+def send_to_server_user_actions(network, user_action_str, user_action):
+    network.only_send(user_action_str)
+    return network.send(user_action)
 
 
-def detect_button_clicked(button, clicked_locations):
+def detect_rect_clicked(rect, clicked_locations):
     for loc_clicked in clicked_locations:
-        if button.collidepoint(loc_clicked):
+        if rect.collidepoint(loc_clicked):
             return True
     return False
 
@@ -72,9 +72,9 @@ def play_as_captain(network, screen):
         if can_act:
             target_clicked = detect_target_clicked(clicked_locations, str_board)
             if target_clicked:
-                str_board, can_act, is_stopped = send_to_server_target_clicked(network, target_clicked)
+                str_board, can_act, is_stopped = send_to_server_user_actions(network, "captain clicked loc", target_clicked)
 
-        if not is_stopped and detect_button_clicked(stop_button, clicked_locations):
+        if not is_stopped and detect_rect_clicked(stop_button, clicked_locations):
             str_board, can_act, is_stopped = network.send("captain stop")
 
         # draw
@@ -127,6 +127,10 @@ def play_as_first_mate(network, screen):
     except Exception as e:
         print(e)
 
+    powers_rects = []
+    for i in range(2):
+        for j in range(3):
+            powers_rects.append(pygame.Rect([143 + 394 * j, 173 + 265 * i, 232, 165]))
 
     while game_states != "exit":
         # check for update from server
@@ -145,8 +149,15 @@ def play_as_first_mate(network, screen):
                 clicked_locations = clicked_locations.union({event.pos})
                 print(event.pos)
 
+        #logic
+        if can_act:
+            power_clicked = detect_power_clicked(powers_rects, clicked_locations)
+            if power_clicked:
+                powers_charges, hp, can_act, is_stopped = send_to_server_user_actions(network, "first mate clicked power", powers_rects.index(power_clicked))
+                # power clicked is sent to the server as the index of the power in powerActionsList witch is the same as powers_rects
+
         # draw
-        draw_first_mate_screen(screen, is_stopped)
+        draw_first_mate_screen(screen, is_stopped, powers_rects, powers_charges, can_act)
         pygame.display.flip()
         clock.tick(FPS)
 
@@ -155,7 +166,16 @@ def play_as_first_mate(network, screen):
     sys.exit()
 
 
-def draw_first_mate_screen(screen, is_stopped):
+
+def detect_power_clicked(powers_rects, clicked_locations):
+    for rect in powers_rects:
+        if detect_rect_clicked(rect, clicked_locations):
+            return rect
+
+    return None
+
+
+def draw_first_mate_screen(screen, is_stopped, powers_rects, powers_charges, can_act):
     if is_stopped:
         screen.fill(black)
         message_display(screen, "stop")
@@ -163,12 +183,15 @@ def draw_first_mate_screen(screen, is_stopped):
 
     draw_bg_img(screen, 'img/FirstMateCard.jpeg')
 
-    powers_rects = []
-    for i in range(2):
-        for j in range(3):
-            powers_rects.append(pygame.Rect([143 + 394*j, 173 + 265 * i, 232, 165]))
-            # pygame.draw.rect(screen, black, powers_rects[-1], 2) # debug
+    draw_charge_bars(screen, powers_charges, powers_rects, can_act)
 
+def draw_charge_bars(screen, powers_charges, powers_rects, can_act):
+    for power_charge, rect in zip(powers_charges, powers_rects):
+        for k in range(power_charge[0]):
+            pygame.draw.arc(screen, red, rect, math.pi/2 - ((k+1) * math.pi/4), math.pi/2 - (k * math.pi/4), 20)
+
+        if can_act and power_charge[0] < power_charge[1]:
+            pygame.draw.arc(screen, yellow, rect, math.pi/2 - ((power_charge[0]+1) * math.pi/4), math.pi/2 - (power_charge[0] * math.pi/4), 20)
 
 
 def start_the_game(network, screen, my_pick):
