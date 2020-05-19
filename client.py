@@ -163,6 +163,13 @@ def draw_first_mate_screen(screen, is_stopped):
 
     draw_bg_img(screen, 'img/FirstMateCard.jpeg')
 
+    powers_rects = []
+    for i in range(2):
+        for j in range(3):
+            powers_rects.append(pygame.Rect([143 + 394*j, 173 + 265 * i, 232, 165]))
+            # pygame.draw.rect(screen, black, powers_rects[-1], 2) # debug
+
+
 
 def start_the_game(network, screen, my_pick):
     try:
