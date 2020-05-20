@@ -70,6 +70,14 @@ def threaded_client(conn, this_player_id):
                     this_player.load_power(power_clicked_index)
                     current_player_state = this_player.get_state(game)
 
+                # engineer stuff
+                elif data == "engineer get":
+                    current_player_state = this_player.get_state(game)
+                elif data == "engineer clicked tool":
+                    tool_to_brake_cords = recv(conn)
+                    this_player.brake_tool(tool_to_brake_cords)
+                    current_player_state = this_player.get_state(game)
+
                 send_msg(conn, tuple(current_player_state))
 
 

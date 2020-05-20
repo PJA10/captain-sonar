@@ -16,4 +16,4 @@ BLUE_TEAM = 0
 YELLOW_TEAM = 1
 board_width = 15
 board_height = 15
-direction_dict = {"N": (0,-1), "E": (1,0), "S": (0,1), "W": (-1,0)}
+direction_dict = {"N": (-1,0), "E": (0,1), "S": (1,0), "W": (0,-1)}

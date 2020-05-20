@@ -32,7 +32,7 @@ def send_to_server_user_actions(network, user_action_str, user_action):
     return network.send(user_action)
 
 
-def detect_rect_clicked(rect, clicked_locations):
+def is_rect_clicked(rect, clicked_locations):
     for loc_clicked in clicked_locations:
         if rect.collidepoint(loc_clicked):
             return True
@@ -74,7 +74,7 @@ def play_as_captain(network, screen):
             if target_clicked:
                 str_board, can_act, is_stopped = send_to_server_user_actions(network, "captain clicked loc", target_clicked)
 
-        if not is_stopped and detect_rect_clicked(stop_button, clicked_locations):
+        if not is_stopped and is_rect_clicked(stop_button, clicked_locations):
             str_board, can_act, is_stopped = network.send("captain stop")
 
         # draw
@@ -167,9 +167,9 @@ def play_as_first_mate(network, screen):
 
 
 
-def detect_power_clicked(powers_rects, clicked_locations):
-    for rect in powers_rects:
-        if detect_rect_clicked(rect, clicked_locations):
+def detect_power_clicked(rects_list, clicked_locations):
+    for rect in rects_list:
+        if is_rect_clicked(rect, clicked_locations):
             return rect
 
     return None
@@ -185,6 +185,7 @@ def draw_first_mate_screen(screen, is_stopped, powers_rects, powers_charges, can
 
     draw_charge_bars(screen, powers_charges, powers_rects, can_act)
 
+
 def draw_charge_bars(screen, powers_charges, powers_rects, can_act):
     for power_charge, rect in zip(powers_charges, powers_rects):
         for k in range(power_charge[0]):
@@ -194,6 +195,84 @@ def draw_charge_bars(screen, powers_charges, powers_rects, can_act):
             pygame.draw.arc(screen, yellow, rect, math.pi/2 - ((power_charge[0]+1) * math.pi/4), math.pi/2 - (power_charge[0] * math.pi/4), 20)
 
 
+def play_as_engineer(network, screen):
+    clock = pygame.time.Clock()
+    FPS = 60
+    screen.fill(blue)
+    game_states = "play"
+
+    try:
+        tools_state, can_act, is_stopped = network.send("engineer get")
+    except Exception as e:
+        print(e)
+
+    tools_rects = []
+    for j in range(3):
+        tools_rects_row = []
+        for i in range(12):
+            tools_rects_row.append(pygame.Rect([164 + 71*i + 39*(i//3),418 + j*76,60,50]))
+        tools_rects.append(tools_rects_row)
+
+    while game_states != "exit":
+        # check for update from server
+        got = network.listen(blocking=False)
+        if got:
+            if got == "sending game state":
+                tools_state, can_act, is_stopped = network.listen()
+
+        # collect pygame events
+        clicked_locations = set()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                game_states = "exit"
+
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                clicked_locations = clicked_locations.union({event.pos})
+                print(event.pos)
+
+        # logic
+        if can_act:
+            possible_tools_to_break_rects = []
+            for tool in tools_state:
+                if tool[1] == "y":
+                    possible_tools_to_break_rects.append(tools_rects[tool[0][0]][tool[0][1]])
+            tool_clicked = detect_power_clicked(possible_tools_to_break_rects, clicked_locations)
+            if tool_clicked:
+                tool_clicked_cords = [(i, colour.index(tool_clicked)) for i, colour in enumerate(tools_rects) if tool_clicked in colour][0]
+                tools_state, can_act, is_stopped = send_to_server_user_actions(network,
+                                                                                      "engineer clicked tool",
+                                                                               tool_clicked_cords)
+
+
+        # draw
+        draw_engineer_screen(screen, is_stopped, tools_state, tools_rects)
+        pygame.display.flip()
+        clock.tick(FPS)
+
+    network.close()
+    pygame.quit()
+    sys.exit()
+
+
+def draw_engineer_screen(screen, is_stopped, tools_state, tools_rects):
+    if is_stopped:
+        screen.fill(black)
+        message_display(screen, "stop")
+        return
+
+    draw_bg_img(screen, 'img/EngineerCard.jpeg')
+
+    for tool in tools_state:
+        if tool[1] == "r":
+            draw_engineer_tool(screen, red, tools_rects, tool[0])
+        elif tool[1] == "y":
+            draw_engineer_tool(screen, yellow, tools_rects, tool[0])
+
+
+def draw_engineer_tool(screen, color, tools_rects, cords):
+        pygame.draw.rect(screen, color, tools_rects[cords[0]][cords[1]], 2)
+
+
 def start_the_game(network, screen, my_pick):
     try:
         my_role = my_pick[1]
@@ -201,6 +280,8 @@ def start_the_game(network, screen, my_pick):
             play_as_captain(network, screen)
         elif my_role == FIRST_MATE:
             play_as_first_mate(network, screen)
+        elif my_role == ENGINEER:
+            play_as_engineer(network, screen)
 
     except Exception as e:
         network.close()

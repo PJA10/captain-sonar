@@ -35,6 +35,8 @@ class Network:
     def listen(self, blocking=True):
         try:
             got = recv(self.client, blocking)
+            if got:
+                print('got:', got)
             return got
 
         except BlockingIOError:
