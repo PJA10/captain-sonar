@@ -78,6 +78,10 @@ def threaded_client(conn, this_player_id):
                     this_player.brake_tool(tool_to_brake_cords)
                     current_player_state = this_player.get_state(game)
 
+                # radio operator stuff
+                elif data == "radio operator get":
+                    current_player_state = this_player.get_state(game)
+
                 send_msg(conn, tuple(current_player_state))
 
 

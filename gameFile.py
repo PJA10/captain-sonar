@@ -23,6 +23,8 @@ class Game:
             new_player = player.FirstMatePlayer(new_player_team, new_player_role, self.submarines[new_player_team])
         elif new_player_role == ENGINEER:
             new_player = player.EngineerPlayer(new_player_team, new_player_role, self.submarines[new_player_team])
+        elif new_player_role == RADIO_OPERATOR:
+            new_player = player.RadioOperatorPlayer(new_player_team, new_player_role, self.submarines[new_player_team])
 
         self.players.append(new_player)
         return new_player

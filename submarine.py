@@ -92,11 +92,12 @@ class Submarine:
             self.hp -= 1
             self.fix_all_tools()
 
-
-
     def fix_all_tools(self):
         for tool in self.tools:
             tool.fix()
+
+    def get_enemy_submarine(self, game):
+        return [submarine for submarine in game.submarines if submarine is not self][0]
 
 class PowerAction:
     def __init__(self, name, type, max_charge):

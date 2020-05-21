@@ -17,3 +17,6 @@ YELLOW_TEAM = 1
 board_width = 15
 board_height = 15
 direction_dict = {"N": (-1,0), "E": (0,1), "S": (1,0), "W": (0,-1)}
+BRUSH = 0
+ERASER = 1
+SELECT = 2

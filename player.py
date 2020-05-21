@@ -22,7 +22,6 @@ class Player:
 class CaptainPlayer(Player):
     def __init__(self, team, role, submarine):
         super().__init__(team, role, submarine)
-        self.submarine.captain = self
 
     def is_can_act(self):
         return self.submarine.can_move
@@ -52,7 +51,6 @@ class CaptainPlayer(Player):
 class FirstMatePlayer(Player):
     def __init__(self, team, role, submarine):
         super().__init__(team, role, submarine)
-        self.submarine.first_mate = self
 
     def is_can_act(self):
         return not self.submarine.is_first_mate_check
@@ -75,7 +73,6 @@ class FirstMatePlayer(Player):
 class EngineerPlayer(Player):
     def __init__(self, team, role, submarine):
         super().__init__(team, role, submarine)
-        self.submarine.engineer = self
 
     def is_can_act(self):
         return not self.submarine.is_engineer_check
@@ -101,6 +98,15 @@ class EngineerPlayer(Player):
         if tool_to_brake and not tool_to_brake.is_broken and tool_to_brake.direction == self.submarine.last_move_direction:
             self.submarine.brake_tool(tool_to_brake)
             self.submarine.engineer_check()
+
+
+class RadioOperatorPlayer(Player):
+    def __init__(self, team, role, submarine):
+        super().__init__(team, role, submarine)
+        self.submarine.engineer = self
+
+    def get_state(self, game):
+        return RadioOperatorState(self, game)
 
 
 class State:
@@ -145,3 +151,19 @@ class EngineerState(State):
 
     def __iter__(self):
         yield from (self.tools_state, self.can_act, self.is_game_stopped)
+
+
+class RadioOperatorState(State):
+    def __init__(self, player, game):
+        super().__init__(player, game)
+        enemy_submarine = player.submarine.get_enemy_submarine(game)
+        self.last_enemy_move_direction = f"{len(enemy_submarine.path)}. " + enemy_submarine.last_move_direction
+
+
+    def __eq__(self, other):
+        return tuple(self) == tuple(other)
+
+    def __iter__(self):
+        yield from (self.last_enemy_move_direction, self.is_game_stopped)
+
+
