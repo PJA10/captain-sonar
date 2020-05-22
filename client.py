@@ -5,7 +5,6 @@ import sys
 from network import Network
 from globals import *
 import pygame_menu
-import config
 import math
 
 
@@ -67,7 +66,6 @@ class Client:
 
     def play(self):
         # request game state
-
         self.request_game_state()
 
         while self.game_states != "exit":
@@ -296,11 +294,174 @@ class EngineerClient(Client):
     def draw_engineer_tool(self, color, cords):
         pygame.draw.rect(self.screen, color, self.tools_rects[cords[0]][cords[1]], 2)
 
+
+class RadioOperatorClient(Client):
+    img_file_name = 'img/AlphaMap2.jpeg'
+
+    def __init__(self, screen, network):
+        super().__init__(screen, network, RadioOperatorClient.img_file_name)
+        b_pen_tool = Button(screen_width / 5 * 4, 60, 30, 30, "img/brush.png", True)
+        b_eraser_tool = Button(screen_width / 5 * 4 + 50, 60, 30, 30, "img/eraser.png", False)
+        b_select_tool = Button(screen_width / 5 * 4, 110, 30, 30, "img/select2.png", False)
+        self.buttons = [b_pen_tool, b_eraser_tool, b_select_tool]
+
+        self.drawing_cells_list = []
+        self.selected_tool = 0
+        self.clicking = False
+        self.holding_ctrl = False
+
+        self.select_tool_start_pos = None
+        self.select_tool_move_start_pos = None
+        self.select_tool_cells_selected = []
+        self.select_tool_rect = None
+
+    def play(self):
+        # request game state
+        self.request_game_state()
+
+        while self.game_states != "exit":
+            # check for update from server
+            self.listen_for_server_update()
+
+            # collect pygame events
+            self.clicked_locations = set()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.game_states = "exit"
+
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    self.mouse_pressed(event)
+
+                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                    self.mouse_released()
+
+                elif event.type == pygame.MOUSEMOTION and self.clicking:
+                    self.mouse_drug()
+
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_LCTRL:
+                        self.holding_ctrl = True
+
+                elif event.type == pygame.KEYUP:
+                    self.key_pressed(event)
+
+            #logic
+            self.play_outside_of_turn()
+
+            # draw
+            if self.state.is_game_stopped:
+                self.draw_stop_screen()
+            else:
+                self.draw()
+
+            pygame.display.flip()
+            self.clock.tick(self.FPS)
+
+        self.end_game()
+
+    def mouse_pressed(self, event):
+        self.clicking = True
+        clicked_pos = event.pos
+        self.clicked_locations = self.clicked_locations.union({clicked_pos})  # add curr pos to the set
+
+        if self.selected_tool == SELECT:
+            if self.select_tool_rect and self.select_tool_rect.collidepoint(
+                    clicked_pos):  # if starting to drug select box
+                self.select_tool_move_start_pos = clicked_pos
+            else:  # starting a new select box
+                self.select_tool_cells_selected = None
+                self.select_tool_start_pos = clicked_pos
+
+        for but in self.buttons:
+            if but.rect.collidepoint(clicked_pos):
+                self.selected_tool = self.buttons.index(but)
+                but.clicked = True
+                for other_but in self.buttons:
+                    if other_but != but:
+                        other_but.clicked = False
+
+    def mouse_released(self):
+        self.clicking = False
+        if self.selected_tool == SELECT and self.select_tool_rect and self.select_tool_cells_selected is None:
+            self.select_tool_cells_selected = [drawing_cell for drawing_cell in self.drawing_cells_list if
+                                          drawing_cell.rect.colliderect(self.select_tool_rect)]
+
+    def mouse_drug(self):
+        mouse_pos = pygame.mouse.get_pos()
+        self.clicked_locations = self.clicked_locations.union({mouse_pos})
+
+        if self.selected_tool == SELECT:
+            if self.select_tool_cells_selected is not None:  # drugging the select box
+                self.drug_existing_select_box()
+            elif self.select_tool_start_pos:  # drugging to create the select box
+                self.drug_to_create_select_box()
+
+    def drug_existing_select_box(self):
+        select_tool_move_end_pos = pygame.mouse.get_pos()
+        dx = select_tool_move_end_pos[0] - self.select_tool_move_start_pos[0]
+        dy = select_tool_move_end_pos[1] - self.select_tool_move_start_pos[1]
+        for cell in self.select_tool_cells_selected:
+            cell.move(dx, dy)
+        self.select_tool_rect = self.select_tool_rect.move(dx, dy)
+        self.select_tool_move_start_pos = select_tool_move_end_pos
+
+    def drug_to_create_select_box(self):
+        select_tool_end_pos = pygame.mouse.get_pos()
+        left_top = (min(select_tool_end_pos[0], self.select_tool_start_pos[0]),
+                    min(select_tool_end_pos[1], self.select_tool_start_pos[1]))
+        width = abs(select_tool_end_pos[0] - self.select_tool_start_pos[0])
+        height = abs(select_tool_end_pos[1] - self.select_tool_start_pos[1])
+        self.select_tool_rect = pygame.Rect(left_top[0], left_top[1], width, height)
+
+    def key_pressed(self, event):
+        if event.key == pygame.K_LCTRL:
+            self.holding_ctrl = False
+
+        if event.key == pygame.K_SPACE:
+            if self.holding_ctrl:
+                # if there is a select box, only delete the selected drawing cells
+                if self.select_tool_cells_selected is not None:
+                    self.drawing_cells_list = [drawing_cell for drawing_cell in self.drawing_cells_list if
+                                          drawing_cell not in self.select_tool_cells_selected]
+                    self.select_tool_cells_selected = []
+                else: # if there is no select box delete all drawing cells
+                    self.drawing_cells_list = []
+
+    def play_outside_of_turn(self):
+        if self.selected_tool != SELECT:
+            self.select_tool_rect = None
+            self.select_tool_cells_selected = None
+
+        if not self.state.is_game_stopped:
+            for mouse_pos in self.clicked_locations:
+                if self.selected_tool == BRUSH:
+                    self.drawing_cells_list.append(DrawingCell(mouse_pos))
+                elif self.selected_tool == ERASER:
+                    self.drawing_cells_list = [drawing_cell for drawing_cell in self.drawing_cells_list if
+                                          not drawing_cell.rect.collidepoint(mouse_pos)]
+
+    def draw(self):
+        self.draw_bg_img()
+
+        for cell in self.drawing_cells_list:
+            cell.draw(self.screen)
+
+        message_display(self.screen, "Tools", screen_width / 5 * 4, 30, 25)
+        message_display(self.screen, self.state.last_enemy_move_direction, screen_width / 5 * 4, 400, 40)
+        pygame.draw.rect(self.screen, (180, 180, 180), (screen_width / 5 * 4 - 30, 50, 170, 100))
+        for but in self.buttons:
+            but.draw(self.screen)
+
+        if self.select_tool_rect:
+            pygame.draw.rect(self.screen, [255, 255, 255], self.select_tool_rect, 2)
+
+
+
 state_class_map = {
     CaptainClient: CaptainState,
     FirstMateClient: FirstMateState,
     EngineerClient: EngineerState,
-    Client: RadioOperatorState
+    RadioOperatorClient: RadioOperatorState
     }
 
 
@@ -346,7 +507,7 @@ def play_as_radio_operator(network, screen):
                 is_game_stopped, last_enemy_move_direction = network.listen()
 
         # collect pygame events
-        mouse_locations = set()
+        clicked_locations = set()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 game_states = "exit"
@@ -354,7 +515,7 @@ def play_as_radio_operator(network, screen):
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 clicking = True
                 clicked_pos = event.pos
-                mouse_locations = mouse_locations.union({clicked_pos})
+                clicked_locations = clicked_locations.union({clicked_pos})
 
                 if selected_tool == SELECT:
                     if select_tool_rect and select_tool_rect.collidepoint(clicked_pos): # if starting to drug select box
@@ -380,7 +541,7 @@ def play_as_radio_operator(network, screen):
             if event.type == pygame.MOUSEMOTION:
                 if clicking:
                     mouse_pos = pygame.mouse.get_pos()
-                    mouse_locations = mouse_locations.union({mouse_pos})
+                    clicked_locations = clicked_locations.union({mouse_pos})
 
                     if selected_tool == SELECT:
                         if select_tool_cells_selected is not None: # drugging the select box
@@ -423,7 +584,7 @@ def play_as_radio_operator(network, screen):
             select_tool_cells_selected = None
 
         if not is_game_stopped:
-            for mouse_pos in mouse_locations:
+            for mouse_pos in clicked_locations:
                 if selected_tool == BRUSH:
                     drawing_cells_list.append(DrawingCell(mouse_pos))
                 elif selected_tool == ERASER:
@@ -464,15 +625,15 @@ def start_the_game(network, screen, my_pick):
         my_role = my_pick[1]
         if my_role == CAPTAIN:
             client = CaptainClient(screen, network)
-            client.play()
         elif my_role == FIRST_MATE:
             client = FirstMateClient(screen, network)
-            client.play()
         elif my_role == ENGINEER:
             client = EngineerClient(screen, network)
-            client.play()
         elif my_role == RADIO_OPERATOR:
-            play_as_radio_operator(screen, network)
+            client = RadioOperatorClient(screen, network)
+
+        client.play()
+
 
     except Exception as e:
         network.close()

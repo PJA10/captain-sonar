@@ -178,6 +178,6 @@ class RadioOperatorState(State):
         del state.__dict__["can_act"]
         enemy_submarine = player.submarine.get_enemy_submarine(game)
         last_enemy_move_direction = f"{len(enemy_submarine.path)}. " + enemy_submarine.last_move_direction
-        return cls(state.can_act, state.is_game_stopped, last_enemy_move_direction)
+        return cls(state.is_game_stopped, last_enemy_move_direction)
 
 
