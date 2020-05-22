@@ -407,6 +407,7 @@ class RadioOperatorClient(Client):
             if self.state.is_game_stopped:
                 self.draw_stop_screen()
             else:
+                self.draw_bg_img()
                 self.draw()
 
             pygame.display.flip()
