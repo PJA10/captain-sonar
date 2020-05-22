@@ -90,7 +90,7 @@ def play_as_captain(network, screen):
     game_states = "play"
 
     try:
-        str_board, can_act, is_stopped = network.send("captain get")
+        can_act, is_stopped, str_board = network.send("captain get")
     except Exception as e:
         print(e)
 
@@ -102,7 +102,7 @@ def play_as_captain(network, screen):
         got = network.listen(blocking=False)
         if got:
             if got == "sending game state":
-                str_board, can_act, is_stopped = network.listen()
+                can_act, is_stopped, str_board = network.listen()
 
         # collect pygame events
         clicked_locations = set()
@@ -118,10 +118,10 @@ def play_as_captain(network, screen):
         if can_act:
             target_clicked = detect_target_clicked(clicked_locations, str_board)
             if target_clicked:
-                str_board, can_act, is_stopped = send_to_server_user_actions(network, "captain clicked loc", target_clicked)
+                can_act, is_stopped, str_board = send_to_server_user_actions(network, "captain clicked loc", target_clicked)
 
         if not is_stopped and is_rect_clicked(stop_button, clicked_locations):
-            str_board, can_act, is_stopped = network.send("captain stop")
+            can_act, is_stopped, str_board = network.send("captain stop")
 
         # draw
         draw_captain_screen(screen, bg_img_data, str_board, is_stopped, stop_button)
@@ -169,7 +169,7 @@ def play_as_first_mate(network, screen):
     game_states = "play"
 
     try:
-        powers_charges, hp, can_act, is_stopped= network.send("first mate get")
+        can_act, is_stopped, powers_charges, hp = network.send("first mate get")
     except Exception as e:
         print(e)
 
@@ -185,7 +185,7 @@ def play_as_first_mate(network, screen):
         got = network.listen(blocking=False)
         if got:
             if got == "sending game state":
-                powers_charges, hp, can_act, is_stopped = network.listen()
+                can_act, is_stopped, powers_charges, hp = network.listen()
 
         # collect pygame events
         clicked_locations = set()
@@ -201,7 +201,7 @@ def play_as_first_mate(network, screen):
         if can_act:
             power_clicked = detect_power_clicked(powers_rects[:len(powers_charges)], clicked_locations)
             if power_clicked:
-                powers_charges, hp, can_act, is_stopped = send_to_server_user_actions(network, "first mate clicked power", powers_rects.index(power_clicked))
+                can_act, is_stopped, powers_charges, hp = send_to_server_user_actions(network, "first mate clicked power", powers_rects.index(power_clicked))
                 # power clicked is sent to the server as the index of the power in powerActionsList witch is the same as powers_rects
 
         # draw
@@ -250,7 +250,7 @@ def play_as_engineer(network, screen):
     game_states = "play"
 
     try:
-        tools_state, can_act, is_stopped = network.send("engineer get")
+        can_act, is_stopped, tools_state = network.send("engineer get")
     except Exception as e:
         print(e)
 
@@ -267,7 +267,7 @@ def play_as_engineer(network, screen):
         got = network.listen(blocking=False)
         if got:
             if got == "sending game state":
-                tools_state, can_act, is_stopped = network.listen()
+                can_act, is_stopped, tools_state = network.listen()
 
         # collect pygame events
         clicked_locations = set()
@@ -288,7 +288,7 @@ def play_as_engineer(network, screen):
             tool_clicked = detect_power_clicked(possible_tools_to_break_rects, clicked_locations)
             if tool_clicked:
                 tool_clicked_cords = [(i, colour.index(tool_clicked)) for i, colour in enumerate(tools_rects) if tool_clicked in colour][0]
-                tools_state, can_act, is_stopped = send_to_server_user_actions(network, "engineer clicked tool", tool_clicked_cords)
+                can_act, is_stopped, tools_state = send_to_server_user_actions(network, "engineer clicked tool", tool_clicked_cords)
 
         # draw
         draw_engineer_screen(screen, bg_img_data, is_stopped, tools_state, tools_rects)
