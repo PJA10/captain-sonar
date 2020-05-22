@@ -148,3 +148,6 @@ class RadioOperatorState(State):
         super().__init__(player, game)
         enemy_submarine = player.submarine.get_enemy_submarine(game)
         self.last_enemy_move_direction = f"{len(enemy_submarine.path)}. " + enemy_submarine.last_move_direction
+
+    def __iter__(self):
+        yield from (self.last_enemy_move_direction, self.is_game_stopped)
