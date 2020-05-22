@@ -53,16 +53,15 @@ class Button(object):
 class Client:
     FPS = 60
     game_states = "play"
+    img_file_name = None
 
-    def __init__(self, screen, network, bg_img_file_name=""):
+    def __init__(self, screen, network):
         self.screen = screen
         self.network = network
         self.clock = pygame.time.Clock()
         self.state = None
         self.clicked_locations = set()
-        if bg_img_file_name:
-            self.bg_img_data = Client.load_bg_img(bg_img_file_name)
-
+        self.bg_img_data = self.load_bg_img()
 
     def play(self):
         # request game state
@@ -101,7 +100,6 @@ class Client:
         self.end_game()
 
     def update_state(self, state_tuple):
-        #print(myConfig.state_class_map)
         self.state = state_class_map[self.__class__](*state_tuple)
 
     def request_game_state(self):
@@ -165,9 +163,8 @@ class Client:
         text_rect.center = (x, y)
         self.screen.blit(text_surf, text_rect)
 
-    @staticmethod
-    def load_bg_img(img):
-        background_image = pygame.image.load(img)
+    def load_bg_img(self):
+        background_image = pygame.image.load(self.img_file_name)
         background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
         background_image_rect = background_image.get_rect()
         background_image_rect.left, background_image_rect.top = [0, 0]
@@ -178,7 +175,7 @@ class CaptainClient(Client):
     img_file_name = 'img/AlphaMap2.jpeg'
 
     def __init__(self, screen, network):
-        super().__init__(screen, network, CaptainClient.img_file_name)
+        super().__init__(screen, network)
         self.stop_button = pygame.Rect(4*screen_width//5, screen_height//2, 150, 150)
 
     def play_turn(self):
@@ -197,7 +194,7 @@ class CaptainClient(Client):
         self.message_display("stop", self.stop_button.x + self.stop_button.width // 2, self.stop_button.y + self.stop_button.height // 2,
                         self.stop_button.width // 3)
 
-        self.draw_captain_board_str()
+        self.draw_captain_board()
 
     def detect_target_clicked(self):
         target_clicked = None
@@ -218,7 +215,7 @@ class CaptainClient(Client):
             break
         return target_clicked
 
-    def draw_captain_board_str(self):
+    def draw_captain_board(self):
         for i in range(board_height):
             for j in range(board_width):
                 c = self.state.board_str[i*board_height + j]
@@ -238,7 +235,7 @@ class FirstMateClient(Client):
     img_file_name = 'img/FirstMateCard.jpeg'
 
     def __init__(self, screen, network):
-        super().__init__(screen, network, FirstMateClient.img_file_name)
+        super().__init__(screen, network)
         self.powers_rects = []
         for i in range(2):
             for j in range(3):
@@ -268,7 +265,7 @@ class EngineerClient(Client):
     img_file_name = 'img/EngineerCard.jpeg'
 
     def __init__(self, screen, network):
-        super().__init__(screen, network, EngineerClient.img_file_name)
+        super().__init__(screen, network)
         self.tools_rects = [[pygame.Rect([164 + 71 * i + 39 * (i // 3), 418 + j * 76, 60, 50]) for i in range(12)] for j in
                            range(3)]
 
@@ -299,7 +296,7 @@ class RadioOperatorClient(Client):
     img_file_name = 'img/AlphaMap2.jpeg'
 
     def __init__(self, screen, network):
-        super().__init__(screen, network, RadioOperatorClient.img_file_name)
+        super().__init__(screen, network)
         b_pen_tool = Button(screen_width / 5 * 4, 60, 30, 30, "img/brush.png", True)
         b_eraser_tool = Button(screen_width / 5 * 4 + 50, 60, 30, 30, "img/eraser.png", False)
         b_select_tool = Button(screen_width / 5 * 4, 110, 30, 30, "img/select2.png", False)
@@ -456,13 +453,12 @@ class RadioOperatorClient(Client):
             pygame.draw.rect(self.screen, [255, 255, 255], self.select_tool_rect, 2)
 
 
-
 state_class_map = {
     CaptainClient: CaptainState,
     FirstMateClient: FirstMateState,
     EngineerClient: EngineerState,
     RadioOperatorClient: RadioOperatorState
-    }
+}
 
 
 def start_the_game(network, screen, my_pick):
@@ -504,7 +500,6 @@ def try_start_game(network, screen, my_picking_selectors, start_game_menu):
 def main():
     pygame.init()
     screen = pygame.display.set_mode((screen_width, screen_height))
-    my_team, my_role = BLUE_TEAM, CAPTAIN
     try:
         network = Network()
     except:
@@ -521,6 +516,5 @@ def main():
 
     start_game_menu.mainloop(screen)
 
-#if __name__ == '__main__':
-#    main()
-main()
+if __name__ == '__main__':
+    main()
