@@ -1,10 +1,11 @@
 from _thread import start_new_thread
-
+from player import State, CaptainState, FirstMateState, EngineerState, RadioOperatorState
 import pygame
 import sys
 from network import Network
 from globals import *
 import pygame_menu
+from config import state_class_map
 import math
 
 
@@ -49,6 +50,103 @@ class Button(object):
         win.blit(self.subsurface, self.pos)
         self.subsurface.blit(self.img, (15, self.height/3))
         win.blit(pygame.transform.scale(self.img, (22, 22)), (self.pos[0] + 3, self.pos[1] + 2))
+
+class Client:
+    FPS = 60
+    game_states = "play"
+
+    def __init__(self, screen, network, bg_img_file_name=""):
+        self.screen = screen
+        self.network = network
+        clock = pygame.time.Clock()
+        self.state = None
+        if bg_img_file_name:
+            self.bg_img_data = load_bg_img(bg_img_file_name)
+
+
+    def play(self):
+        # request game state
+        try:
+            self.update_state(self.network.send("get"))
+        except Exception as e:
+            print(e)
+
+        while self.game_states != "exit":
+            # check for update from server
+            got = self.network.listen(blocking=False)
+            if got:
+                if got == "sending game state":
+                    self.update_state(self.network.listen())
+
+            # collect pygame events
+            clicked_locations = set()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.game_states = "exit"
+
+                if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                    clicked_locations = clicked_locations.union({event.pos})  # add curr pos to the set
+                    print(event.pos)  # debug
+
+            # logic
+            if self.state.can_act:
+                self.play_turn(clicked_locations)
+
+            self.play_outside_of_turn()
+
+            # draw
+            self.draw()
+            pygame.display.flip()
+            self.clock.tick(self.FPS)
+
+        self.end_game()
+
+    def update_state(self, state_tuple):
+        self.state = state_class_map[self.__class__].__init__(*state_tuple)
+
+    def play_turn(self, clicked_locations):
+        pass
+
+    def play_outside_of_turn(self, clicked_locations):
+        pass
+
+    def draw(self):
+        pass
+
+    def draw_bg_img(self):
+        self.screen.blit(self.bg_img_data[0], self.bg_img_data[1])
+
+    def end_game(self):
+        self.network.close()
+        pygame.quit()
+        sys.exit()
+
+class CaptainClient(Client):
+    def __init__(self, screen, network):
+        super().__init__(screen, network, 'img/AlphaMap2.jpeg')
+        self.stop_button = pygame.Rect(4*screen_width//5, screen_height//2, 150, 150) # stop_button pos
+
+    def play_turn(self, clicked_locations):
+        target_clicked = detect_target_clicked(clicked_locations, self.state.str_board)
+        if target_clicked:
+            self.update_state(send_to_server_user_actions(self.network, "captain clicked loc", target_clicked))
+
+    def play_outside_of_turn(self, clicked_locations):
+        if not self.state.is_stopped and is_rect_clicked(self.stop_button, clicked_locations):
+            self.update_state(self.network.send("captain stop"))
+
+    def draw(self):
+        if self.state.is_stopped:
+            draw_stop_screen(self.screen)
+            return
+
+        self.draw_bg_img()
+
+        pygame.draw.rect(self.screen, black, self.stop_button)  # draw button
+        message_display(self.screen, "stop", self.stop_button.x + self.stop_button.width // 2, self.stop_button.y + self.stop_button.height // 2,
+                        self.stop_button.width // 3)
+
+        draw_captain_str_board(self.screen, self.state.str_board)
 
 
 

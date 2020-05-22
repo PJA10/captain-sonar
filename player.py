@@ -113,9 +113,17 @@ class RadioOperatorPlayer(Player):
 
 
 class State:
-    def __init__(self, player, game):
-        self.can_act = player.is_can_act()
-        self.is_game_stopped = game.is_stopped
+    def __init__(self, can_act, is_game_stopped):
+        self.can_act = can_act
+        self.is_game_stopped = is_game_stopped
+
+    @classmethod
+    def from_player(cls, player, game):
+        return cls(player.is_can_act(), game.is_stopped)
+
+    # @classmethod
+    # def from_tuple(cls, data_tuple):
+    #     return cls(data_tuple[0], data_tuple[1])
 
     def __eq__(self, other):
         return tuple(self) == tuple(other)
@@ -125,29 +133,51 @@ class State:
 
 
 class CaptainState(State):
-    def __init__(self, player, game):
-        super().__init__(player, game)
-        self.board_str = player.get_board_str(game)
+    def __init__(self, can_act, is_game_stopped, board_str):
+        super().__init__(can_act, is_game_stopped)
+        self.board_str = board_str
+
+    @classmethod
+    def from_player(cls, player, game):
+        state = super.from_player(player, game)
+        return cls(state.can_act, state.is_game_stopped, player.get_board_str(game))
 
 
 class FirstMateState(State):
-    def __init__(self, player, game):
-        super().__init__(player, game)
-        self.powers_charges = player.get_powers_charges()
-        self.hp = player.submarine.hp
+    def __init__(self, can_act, is_game_stopped, powers_charges, hp):
+        super().__init__(can_act, is_game_stopped)
+        self.powers_charges = powers_charges
+        self.hp = hp
+
+    @classmethod
+    def from_player(cls, player, game):
+        state = super().__init__(player, game)
+        return cls(state.can_act, state.is_game_stopped, player.get_powers_charges(), player.submarine.hp)
 
 
 class EngineerState(State):
-    def __init__(self, player, game):
-        super().__init__(player, game)
-        self.tools_state = player.get_tools_state()
+    def __init__(self, can_act, is_game_stopped, tools_state):
+        super().__init__(can_act, is_game_stopped)
+        self.tools_state = tools_state
+
+    @classmethod
+    def from_player(cls, player, game):
+        state = super().__init__(player, game)
+        return cls(state.can_act, state.is_game_stopped, player.get_tools_state())
     
 
 class RadioOperatorState(State):
-    def __init__(self, player, game):
-        super().__init__(player, game)
+    def __init__(self, is_game_stopped, last_enemy_move_direction):
+        super().__init__(True, is_game_stopped)
         del self.__dict__["can_act"]
+        self.last_enemy_move_direction = last_enemy_move_direction
+
+    @classmethod
+    def from_player(cls, player, game):
+        state = super().__init__(player, game)
+        del state.__dict__["can_act"]
         enemy_submarine = player.submarine.get_enemy_submarine(game)
-        self.last_enemy_move_direction = f"{len(enemy_submarine.path)}. " + enemy_submarine.last_move_direction
+        last_enemy_move_direction = f"{len(enemy_submarine.path)}. " + enemy_submarine.last_move_direction
+        return cls(state.can_act, state.is_game_stopped, last_enemy_move_direction)
 
 
