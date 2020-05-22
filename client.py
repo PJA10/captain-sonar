@@ -343,7 +343,7 @@ def play_as_radio_operator(network, screen):
     bg_img_data = load_bg_img('img/AlphaMap2.jpeg')
 
     try:
-        last_enemy_move_direction, is_stopped = network.send("radio operator get")
+        is_stopped, last_enemy_move_direction = network.send("radio operator get")
     except Exception as e:
         print(e)
 
@@ -356,7 +356,7 @@ def play_as_radio_operator(network, screen):
         got = network.listen(blocking=False)
         if got:
             if got == "sending game state":
-                last_enemy_move_direction, is_stopped = network.listen()
+                is_stopped, last_enemy_move_direction = network.listen()
 
         # collect pygame events
         mouse_locations = set()
