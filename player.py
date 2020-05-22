@@ -120,14 +120,14 @@ class State:
     def __eq__(self, other):
         return tuple(self) == tuple(other)
 
+    def __iter__(self):
+        yield from self.__dict__.values()
+
 
 class CaptainState(State):
     def __init__(self, player, game):
         super().__init__(player, game)
         self.board_str = player.get_board_str(game)
-
-    def __iter__(self):
-        yield from (self.board_str, self.can_act, self.is_game_stopped)
 
 
 class FirstMateState(State):
@@ -136,24 +136,15 @@ class FirstMateState(State):
         self.powers_charges = player.get_powers_charges()
         self.hp = player.submarine.hp
 
-    def __iter__(self):
-        yield from (self.powers_charges, self.hp, self.can_act, self.is_game_stopped)
-
 
 class EngineerState(State):
     def __init__(self, player, game):
         super().__init__(player, game)
         self.tools_state = player.get_tools_state()
     
-    def __iter__(self):
-        yield from (self.tools_state, self.can_act, self.is_game_stopped)
-
 
 class RadioOperatorState(State):
     def __init__(self, player, game):
         super().__init__(player, game)
         enemy_submarine = player.submarine.get_enemy_submarine(game)
         self.last_enemy_move_direction = f"{len(enemy_submarine.path)}. " + enemy_submarine.last_move_direction
-
-    def __iter__(self):
-        yield from (self.last_enemy_move_direction, self.is_game_stopped)
