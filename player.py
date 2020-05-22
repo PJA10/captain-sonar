@@ -105,6 +105,9 @@ class RadioOperatorPlayer(Player):
         super().__init__(team, role, submarine)
         self.submarine.engineer = self
 
+    def is_can_act(self):
+        return True
+
     def get_state(self, game):
         return RadioOperatorState(self, game)
 
