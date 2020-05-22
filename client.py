@@ -194,7 +194,7 @@ class CaptainClient(Client):
         self.draw_bg_img()
 
         pygame.draw.rect(self.screen, black, self.stop_button)  # draw button
-        self.message_display(self.screen, "stop", self.stop_button.x + self.stop_button.width // 2, self.stop_button.y + self.stop_button.height // 2,
+        self.message_display("stop", self.stop_button.x + self.stop_button.width // 2, self.stop_button.y + self.stop_button.height // 2,
                         self.stop_button.width // 3)
 
         self.draw_captain_board_str()
@@ -446,8 +446,8 @@ class RadioOperatorClient(Client):
         for cell in self.drawing_cells_list:
             cell.draw(self.screen)
 
-        self.message_display(self.screen, "Tools", screen_width / 5 * 4, 30, 25)
-        self.message_display(self.screen, self.state.last_enemy_move_direction, screen_width / 5 * 4, 400, 40)
+        self.message_display("Tools", screen_width / 5 * 4, 30, 25)
+        self.message_display(self.state.last_enemy_move_direction, screen_width / 5 * 4, 400, 40)
         pygame.draw.rect(self.screen, (180, 180, 180), (screen_width / 5 * 4 - 30, 50, 170, 100))
         for but in self.buttons:
             but.draw(self.screen)
