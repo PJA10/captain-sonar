@@ -1,20 +1,22 @@
+import math
+import sys
+import pygame
+import pygame_menu
+
 from _thread import start_new_thread
 from player import State, CaptainState, FirstMateState, EngineerState, RadioOperatorState
-import pygame
-import sys
 from network import Network
 from globals import *
-import pygame_menu
-import math
 
 
-class DrawingCell(object):
+
+class DrawingCell:
     def __init__(self, pos, color=(128, 30, 30)):
         self.size = 12
         self.color = color
-        self.subsurface = pygame.Surface((self.size,self.size))
+        self.subsurface = pygame.Surface((self.size, self.size))
         self.subsurface.fill(self.color)
-        self.pos = (pos[0]-self.size//2, pos[1]-self.size//2)
+        self.pos = (pos[0] - self.size // 2, pos[1] - self.size // 2)
         self.rect = pygame.Rect(self.pos[0], self.pos[1], self.size, self.size)
 
     def change_color(self, color):
@@ -29,7 +31,7 @@ class DrawingCell(object):
         self.pos = (self.pos[0] + dx, self.pos[1] + dy)
         self.rect = pygame.Rect(self.pos[0], self.pos[1], self.size, self.size)
 
-class Button(object):
+class Button:
     def __init__(self, posX, posY, width, height, img_name, clicked, color=(80, 80, 80)):
         self.pos = (posX, posY)
         self.width, self.height = width, height
@@ -47,7 +49,7 @@ class Button(object):
             self.subsurface.set_alpha(150)
 
         win.blit(self.subsurface, self.pos)
-        self.subsurface.blit(self.img, (15, self.height/3))
+        self.subsurface.blit(self.img, (15, self.height / 3))
         win.blit(pygame.transform.scale(self.img, (22, 22)), (self.pos[0] + 3, self.pos[1] + 2))
 
 class Client:
@@ -78,7 +80,7 @@ class Client:
                     self.game_states = "exit"
 
                 if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                    self.clicked_locations = self.clicked_locations.union({event.pos})  # add curr pos to the set
+                    self.clicked_locations.add(event.pos)  # add curr pos to the set
                     print(event.pos)  # debug
 
             # logic
@@ -176,7 +178,7 @@ class CaptainClient(Client):
 
     def __init__(self, screen, network):
         super().__init__(screen, network)
-        self.stop_button = pygame.Rect(4*screen_width//5, screen_height//2, 150, 150)
+        self.stop_button = pygame.Rect(4 * screen_width // 5, screen_height // 2, 150, 150)
 
     def play_turn(self):
         target_clicked = self.detect_target_clicked()
@@ -222,13 +224,13 @@ class CaptainClient(Client):
                 if c:
                     if c == "r":
                         color = red
-                        pygame.draw.circle(self.screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
+                        pygame.draw.circle(self.screen, color, (int(0.0984375 * screen_width + 0.040390625 * screen_width * j), int(0.13625 * screen_height + 0.056125 * screen_height * i)), int(0.00576923077 * (screen_height + screen_width)))
                     elif c == "b":
                         color = black
-                        pygame.draw.circle(self.screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height* i)), int(0.00576923077*(screen_height+screen_width)))
+                        pygame.draw.circle(self.screen, color, (int(0.0984375 * screen_width + 0.040390625 * screen_width * j), int(0.13625 * screen_height + 0.056125 * screen_height * i)), int(0.00576923077 * (screen_height + screen_width)))
                     elif c == "y":
                         color = yellow
-                        pygame.draw.circle(self.screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
+                        pygame.draw.circle(self.screen, color, (int(0.0984375 * screen_width + 0.040390625 * screen_width * j), int(0.13625 * screen_height + 0.056125 * screen_height * i)), int(0.00576923077 * (screen_height + screen_width)))
 
 
 class FirstMateClient(Client):
@@ -255,10 +257,10 @@ class FirstMateClient(Client):
     def draw_charge_bars(self):
         for power_charge, rect in zip(self.state.powers_charges, self.powers_rects):
             for k in range(power_charge[0]):
-                pygame.draw.arc(self.screen, red, rect, math.pi/2 - ((k+1) * math.pi/4), math.pi/2 - (k * math.pi/4), 20)
+                pygame.draw.arc(self.screen, red, rect, math.pi / 2 - ((k + 1) * math.pi / 4), math.pi / 2 - (k * math.pi / 4), 20)
 
             if self.state.can_act and power_charge[0] < power_charge[1]:
-                pygame.draw.arc(self.screen, yellow, rect, math.pi/2 - ((power_charge[0]+1) * math.pi/4), math.pi/2 - (power_charge[0] * math.pi/4), 20)
+                pygame.draw.arc(self.screen, yellow, rect, math.pi / 2 - ((power_charge[0] + 1) * math.pi / 4), math.pi / 2 - (power_charge[0] * math.pi / 4), 20)
 
 
 class EngineerClient(Client):
@@ -359,7 +361,7 @@ class RadioOperatorClient(Client):
     def mouse_pressed(self, event):
         self.clicking = True
         clicked_pos = event.pos
-        self.clicked_locations = self.clicked_locations.union({clicked_pos})  # add curr pos to the set
+        self.clicked_locations.add(clicked_pos)  # add curr pos to the set
 
         if self.selected_tool == SELECT:
             if self.select_tool_rect and self.select_tool_rect.collidepoint(
