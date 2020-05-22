@@ -22,8 +22,7 @@ class DrawingCell(object):
         self.subsurface.fill(self.color)
 
     def draw(self, win):
-        if self.color != [255, 255, 255]:
-            win.blit(self.subsurface, self.pos)
+        win.blit(self.subsurface, self.pos)
 
     def move(self, dx, dy):
         self.pos = (self.pos[0] + dx, self.pos[1] + dy)
@@ -42,13 +41,13 @@ class Button(object):
 
     def draw(self, win):
         if self.clicked:
-            self.subsurface.set_alpha(255)
+            self.subsurface.set_alpha(max_alpha)
         else:
-            self.subsurface.set_alpha(150)
+            self.subsurface.set_alpha(max_alpha//2)
 
         win.blit(self.subsurface, self.pos)
         self.subsurface.blit(self.img, (15, self.height/3))
-        win.blit(pygame.transform.scale(self.img, (22, 22)), (self.pos[0] + 3, self.pos[1] + 2))
+        win.blit(pygame.transform.scale(self.img, (self.width * 3 // 4, self.height * 3 // 4)), (self.pos[0], self.pos[1]))
 
 class Client:
     FPS = 60
@@ -78,7 +77,7 @@ class Client:
                 if event.type == pygame.QUIT:
                     self.game_states = "exit"
 
-                if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                if event.type == pygame.MOUSEBUTTONUP and event.button == left_mouse_btn:
                     self.clicked_locations = self.clicked_locations.union({event.pos})  # add curr pos to the set
                     print(event.pos)  # debug
 
@@ -101,7 +100,6 @@ class Client:
         self.end_game()
 
     def update_state(self, state_tuple):
-        #print(myConfig.state_class_map)
         self.state = state_class_map[self.__class__](*state_tuple)
 
     def request_game_state(self):
@@ -170,7 +168,7 @@ class Client:
         background_image = pygame.image.load(img)
         background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
         background_image_rect = background_image.get_rect()
-        background_image_rect.left, background_image_rect.top = [0, 0]
+        background_image_rect.left, background_image_rect.top = [0, 0] # top left pos
         return background_image, background_image_rect
 
 
@@ -179,7 +177,7 @@ class CaptainClient(Client):
 
     def __init__(self, screen, network):
         super().__init__(screen, network, CaptainClient.img_file_name)
-        self.stop_button = pygame.Rect(4*screen_width//5, screen_height//2, 150, 150)
+        self.stop_button = pygame.Rect(4*screen_width//5, screen_height//2, screen_height//5, screen_height//5)
 
     def play_turn(self):
         target_clicked = self.detect_target_clicked()
@@ -200,7 +198,6 @@ class CaptainClient(Client):
         self.draw_captain_board_str()
 
     def detect_target_clicked(self):
-        target_clicked = None
         for loc_clicked in self.clicked_locations:
             for i in range(board_height):
                 for j in range(board_width):
@@ -208,30 +205,25 @@ class CaptainClient(Client):
                                   int(0.13625 * screen_height + 0.056125 * screen_height * i) - loc_clicked[1]) < int(
                         0.00576923077 * (screen_height + screen_width)):
                         if self.state.board_str[board_height * i + j] == "y":
-                            target_clicked = (i, j)
-                            break
-                else:
-                    continue
-                break
-            else:
-                continue
-            break
-        return target_clicked
+                            return i, j
 
     def draw_captain_board_str(self):
         for i in range(board_height):
             for j in range(board_width):
-                c = self.state.board_str[i*board_height + j]
-                if c:
-                    if c == "r":
+                char = self.state.board_str[i * board_height + j]
+                circle_params = ((int(0.0984375 * screen_width + 0.040390625 * screen_width * j),
+                                  int(0.13625 * screen_height + 0.056125 * screen_height * i)),
+                                 int(0.00576923077 * (screen_height + screen_width)))
+                if char:
+                    if char == "r":
                         color = red
-                        pygame.draw.circle(self.screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
-                    elif c == "b":
+                        pygame.draw.circle(self.screen, color, *circle_params)
+                    elif char == "b":
                         color = black
-                        pygame.draw.circle(self.screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height* i)), int(0.00576923077*(screen_height+screen_width)))
-                    elif c == "y":
+                        pygame.draw.circle(self.screen, color, *circle_params)
+                    elif char == "y":
                         color = yellow
-                        pygame.draw.circle(self.screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
+                        pygame.draw.circle(self.screen, color, *circle_params)
 
 
 class FirstMateClient(Client):
@@ -240,8 +232,9 @@ class FirstMateClient(Client):
     def __init__(self, screen, network):
         super().__init__(screen, network, FirstMateClient.img_file_name)
         self.powers_rects = []
-        for i in range(2):
-            for j in range(3):
+
+        for i in range(power_rows):
+            for j in range(power_cols):
                 self.powers_rects.append(pygame.Rect([143 + 394 * j, 173 + 265 * i, 232, 165]))
 
     def play_turn(self):
@@ -256,12 +249,15 @@ class FirstMateClient(Client):
         self.draw_charge_bars()
 
     def draw_charge_bars(self):
+        start_angle = math.pi/2
+        one_arch_angle = math.pi/4
+        arch_border_width = 20
         for power_charge, rect in zip(self.state.powers_charges, self.powers_rects):
             for k in range(power_charge[0]):
-                pygame.draw.arc(self.screen, red, rect, math.pi/2 - ((k+1) * math.pi/4), math.pi/2 - (k * math.pi/4), 20)
+                pygame.draw.arc(self.screen, red, rect, start_angle - ((k+1) * one_arch_angle), start_angle - (k * one_arch_angle), arch_border_width)
 
             if self.state.can_act and power_charge[0] < power_charge[1]:
-                pygame.draw.arc(self.screen, yellow, rect, math.pi/2 - ((power_charge[0]+1) * math.pi/4), math.pi/2 - (power_charge[0] * math.pi/4), 20)
+                pygame.draw.arc(self.screen, yellow, rect, start_angle- ((power_charge[0]+1) * one_arch_angle), start_angle - (power_charge[0] * one_arch_angle), arch_border_width)
 
 
 class EngineerClient(Client):
@@ -269,8 +265,8 @@ class EngineerClient(Client):
 
     def __init__(self, screen, network):
         super().__init__(screen, network, EngineerClient.img_file_name)
-        self.tools_rects = [[pygame.Rect([164 + 71 * i + 39 * (i // 3), 418 + j * 76, 60, 50]) for i in range(12)] for j in
-                           range(3)]
+        self.tools_rects = [[pygame.Rect([164 + 71 * i + 39 * (i // 3), 418 + j * 76, 60, 50]) for i in range(tools_cols)] for j in
+                           range(tools_rows)]
 
     def play_turn(self):
         possible_tools_to_break_rects = [self.tools_rects[tool[0][0]][tool[0][1]] for tool in self.state.tools_state if
@@ -292,7 +288,8 @@ class EngineerClient(Client):
                 self.draw_engineer_tool(yellow, tool[0])
 
     def draw_engineer_tool(self, color, cords):
-        pygame.draw.rect(self.screen, color, self.tools_rects[cords[0]][cords[1]], 2)
+        border_width = 2
+        pygame.draw.rect(self.screen, color, self.tools_rects[cords[0]][cords[1]], border_width)
 
 
 class RadioOperatorClient(Client):
@@ -300,9 +297,10 @@ class RadioOperatorClient(Client):
 
     def __init__(self, screen, network):
         super().__init__(screen, network, RadioOperatorClient.img_file_name)
-        b_pen_tool = Button(screen_width / 5 * 4, 60, 30, 30, "img/brush.png", True)
-        b_eraser_tool = Button(screen_width / 5 * 4 + 50, 60, 30, 30, "img/eraser.png", False)
-        b_select_tool = Button(screen_width / 5 * 4, 110, 30, 30, "img/select2.png", False)
+        button_size = 30
+        b_pen_tool = Button(screen_width / 5 * 4, 60, button_size, button_size, "img/brush.png", True)
+        b_eraser_tool = Button(screen_width / 5 * 4 + button_size + 20, 60, button_size, button_size, "img/eraser.png", False)
+        b_select_tool = Button(screen_width / 5 * 4, 60 + button_size + 20, button_size, button_size, "img/select2.png", False)
         self.buttons = [b_pen_tool, b_eraser_tool, b_select_tool]
 
         self.drawing_cells_list = []
@@ -329,10 +327,10 @@ class RadioOperatorClient(Client):
                 if event.type == pygame.QUIT:
                     self.game_states = "exit"
 
-                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == left_mouse_btn:
                     self.mouse_pressed(event)
 
-                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                elif event.type == pygame.MOUSEBUTTONUP and event.button == left_mouse_btn:
                     self.mouse_released()
 
                 elif event.type == pygame.MOUSEMOTION and self.clicking:
@@ -453,7 +451,8 @@ class RadioOperatorClient(Client):
             but.draw(self.screen)
 
         if self.select_tool_rect:
-            pygame.draw.rect(self.screen, [255, 255, 255], self.select_tool_rect, 2)
+            border_width = 2
+            pygame.draw.rect(self.screen, [255, 255, 255], self.select_tool_rect, border_width)
 
 
 
@@ -504,15 +503,15 @@ def try_start_game(network, screen, my_picking_selectors, start_game_menu):
 def main():
     pygame.init()
     screen = pygame.display.set_mode((screen_width, screen_height))
-    my_team, my_role = BLUE_TEAM, CAPTAIN
+    menu_width, menu_height = 300, 400
     try:
         network = Network()
     except:
-        try_again_menu = pygame_menu.Menu(300, 400, 'Cant connect to server', theme=pygame_menu.themes.THEME_BLUE)
+        try_again_menu = pygame_menu.Menu(menu_width, menu_height, 'Cant connect to server', theme=pygame_menu.themes.THEME_BLUE)
         try_again_menu.add_button('Try again', main)
         try_again_menu.mainloop(screen)
 
-    start_game_menu = pygame_menu.Menu(300, 400, 'Welcome', theme=pygame_menu.themes.THEME_BLUE)
+    start_game_menu = pygame_menu.Menu(menu_width, menu_height, 'Welcome', theme=pygame_menu.themes.THEME_BLUE)
     team_selector = start_game_menu.add_selector('Team :', [('blue', BLUE_TEAM), ('yellow', YELLOW_TEAM)])
     role_selector = start_game_menu.add_selector('Role :', [('captain', CAPTAIN), ('first mate', FIRST_MATE), ('engineer', ENGINEER),
                                             ('radio operator', RADIO_OPERATOR)])
