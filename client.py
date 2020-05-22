@@ -372,10 +372,9 @@ def play_as_radio_operator(network, screen):
                 if selected_tool == SELECT:
                     if select_tool_rect and select_tool_rect.collidepoint(clicked_pos): # if starting to drug select box
                         select_tool_move_start_pos = clicked_pos
-                        select_tool_cells_selected = [drawing_cell for drawing_cell in drawing_cells_list if drawing_cell.rect.colliderect(select_tool_rect)]
                     else: # starting a new select box
-                        select_tool_start_pos = clicked_pos
                         select_tool_cells_selected = None
+                        select_tool_start_pos = clicked_pos
 
                 for but in buttons:
                     if but.rect.collidepoint(clicked_pos):
@@ -387,7 +386,9 @@ def play_as_radio_operator(network, screen):
 
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 clicking = False
-                select_tool_cells_selected = []
+                if selected_tool == SELECT and select_tool_rect and select_tool_cells_selected is None:
+                    select_tool_cells_selected = [drawing_cell for drawing_cell in drawing_cells_list if
+                                                  drawing_cell.rect.colliderect(select_tool_rect)]
 
             if event.type == pygame.MOUSEMOTION:
                 if clicking:
@@ -403,7 +404,7 @@ def play_as_radio_operator(network, screen):
                                 cell.move(dx, dy)
                             select_tool_rect = select_tool_rect.move(dx, dy)
                             select_tool_move_start_pos = select_tool_move_end_pos
-                        else: # drugging to create the select box
+                        elif select_tool_start_pos: # drugging to create the select box
                             select_tool_end_pos = pygame.mouse.get_pos()
                             left_top = (min(select_tool_end_pos[0], select_tool_start_pos[0]),
                                         min(select_tool_end_pos[1], select_tool_start_pos[1]))
@@ -421,7 +422,14 @@ def play_as_radio_operator(network, screen):
 
                 if event.key == pygame.K_SPACE:
                     if holding_ctrl:
-                        drawing_cells_list = []
+                        if select_tool_cells_selected is not None:
+                            drawing_cells_list = [drawing_cell for drawing_cell in drawing_cells_list if drawing_cell not in select_tool_cells_selected]
+                            select_tool_cells_selected = []
+                        # elif select_tool_rect:
+                        #     drawing_cells_list = [drawing_cell for drawing_cell in drawing_cells_list if
+                        #                           not drawing_cell.rect.colliderect(select_tool_rect)]
+                        else:
+                            drawing_cells_list = []
         # logic
         if selected_tool != SELECT:
             select_tool_rect = None
@@ -459,12 +467,6 @@ def draw_radio_operator_screen(screen, is_stopped, last_enemy_move_direction, bg
     pygame.draw.rect(screen, (180,180,180), (screen_width/5*4-30, 50, 170, 100))
     for but in buttons:
         but.draw(screen)
-
-    if selected_tool == BRUSH or selected_tool == ERASER:
-        pygame.mouse.set_visible(False)
-        pygame.draw.circle(screen, (128, 30, 30), (pygame.mouse.get_pos()), 8, 1)
-    elif selected_tool == SELECT:
-        pygame.mouse.set_visible(True)
 
     if select_tool_rect:
         pygame.draw.rect(screen, [255, 255, 255], select_tool_rect, 2)
