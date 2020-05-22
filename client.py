@@ -5,7 +5,7 @@ import sys
 from network import Network
 from globals import *
 import pygame_menu
-from config import state_class_map
+import config
 import math
 
 
@@ -58,56 +58,78 @@ class Client:
     def __init__(self, screen, network, bg_img_file_name=""):
         self.screen = screen
         self.network = network
-        clock = pygame.time.Clock()
+        self.clock = pygame.time.Clock()
         self.state = None
+        self.clicked_locations = set()
         if bg_img_file_name:
-            self.bg_img_data = load_bg_img(bg_img_file_name)
+            self.bg_img_data = Client.load_bg_img(bg_img_file_name)
 
 
     def play(self):
         # request game state
-        try:
-            self.update_state(self.network.send("get"))
-        except Exception as e:
-            print(e)
+
+        self.request_game_state()
 
         while self.game_states != "exit":
             # check for update from server
-            got = self.network.listen(blocking=False)
-            if got:
-                if got == "sending game state":
-                    self.update_state(self.network.listen())
+            self.listen_for_server_update()
 
             # collect pygame events
-            clicked_locations = set()
+            self.clicked_locations = set()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.game_states = "exit"
 
                 if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                    clicked_locations = clicked_locations.union({event.pos})  # add curr pos to the set
+                    self.clicked_locations = self.clicked_locations.union({event.pos})  # add curr pos to the set
                     print(event.pos)  # debug
 
             # logic
             if self.state.can_act:
-                self.play_turn(clicked_locations)
+                self.play_turn()
 
             self.play_outside_of_turn()
 
             # draw
-            self.draw()
+            if self.state.is_game_stopped:
+                self.draw_stop_screen()
+
+            else:
+                self.draw()
+
             pygame.display.flip()
             self.clock.tick(self.FPS)
 
         self.end_game()
 
     def update_state(self, state_tuple):
-        self.state = state_class_map[self.__class__].__init__(*state_tuple)
+        #print(myConfig.state_class_map)
+        self.state = state_class_map[self.__class__](*state_tuple)
 
-    def play_turn(self, clicked_locations):
+    def request_game_state(self):
+        try:
+            self.update_state(self.network.send("get"))
+        except Exception as e:
+            print(e)
+
+    def listen_for_server_update(self):
+        got = self.network.listen(blocking=False)
+        if got:
+            if got == "sending game state":
+                self.update_state(self.network.listen())
+
+    def draw_stop_screen(self):
+        self.screen.fill(black)
+        message_display(self.screen, "stop")
+
+    def send_action_to_server(self, user_action_str, user_action):
+        self.network.only_send(user_action_str)
+        return self.network.send(user_action)
+
+    def play_turn(self):
         pass
 
-    def play_outside_of_turn(self, clicked_locations):
+    def play_outside_of_turn(self):
         pass
 
     def draw(self):
@@ -121,299 +143,166 @@ class Client:
         pygame.quit()
         sys.exit()
 
+    @staticmethod
+    def is_rect_clicked(rect, clicked_locations):
+        for loc_clicked in clicked_locations:
+            if rect.collidepoint(loc_clicked):
+                return True
+        return False
+
+    @staticmethod
+    def detect_rect_clicked(rects_list, clicked_locations):
+        for rect in rects_list:
+            if Client.is_rect_clicked(rect, clicked_locations):
+                return rect
+
+    @staticmethod
+    def text_objects(text, font):
+        text_surface = font.render(text, True, white)
+        return text_surface, text_surface.get_rect()
+
+    def message_display(self, text, x=screen_width / 2, y=screen_height / 2, size=100, font='comicsansms'):
+        large_text = pygame.font.SysFont(font, size)
+        text_surf, text_rect = Client.text_objects(text, large_text)
+        text_rect.center = (x, y)
+        self.screen.blit(text_surf, text_rect)
+
+    @staticmethod
+    def load_bg_img(img):
+        background_image = pygame.image.load(img)
+        background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
+        background_image_rect = background_image.get_rect()
+        background_image_rect.left, background_image_rect.top = [0, 0]
+        return background_image, background_image_rect
+
+
 class CaptainClient(Client):
+    img_file_name = 'img/AlphaMap2.jpeg'
+
     def __init__(self, screen, network):
-        super().__init__(screen, network, 'img/AlphaMap2.jpeg')
-        self.stop_button = pygame.Rect(4*screen_width//5, screen_height//2, 150, 150) # stop_button pos
+        super().__init__(screen, network, CaptainClient.img_file_name)
+        self.stop_button = pygame.Rect(4*screen_width//5, screen_height//2, 150, 150)
 
-    def play_turn(self, clicked_locations):
-        target_clicked = detect_target_clicked(clicked_locations, self.state.str_board)
+    def play_turn(self):
+        target_clicked = self.detect_target_clicked()
         if target_clicked:
-            self.update_state(send_to_server_user_actions(self.network, "captain clicked loc", target_clicked))
+            self.update_state(self.send_action_to_server("captain clicked loc", target_clicked))
 
-    def play_outside_of_turn(self, clicked_locations):
-        if not self.state.is_stopped and is_rect_clicked(self.stop_button, clicked_locations):
+    def play_outside_of_turn(self):
+        if not self.state.is_game_stopped and Client.is_rect_clicked(self.stop_button, self.clicked_locations):
             self.update_state(self.network.send("captain stop"))
 
     def draw(self):
-        if self.state.is_stopped:
-            draw_stop_screen(self.screen)
-            return
-
         self.draw_bg_img()
 
         pygame.draw.rect(self.screen, black, self.stop_button)  # draw button
         message_display(self.screen, "stop", self.stop_button.x + self.stop_button.width // 2, self.stop_button.y + self.stop_button.height // 2,
                         self.stop_button.width // 3)
 
-        draw_captain_str_board(self.screen, self.state.str_board)
+        self.draw_captain_board_str()
 
-
-
-def detect_target_clicked(clicked_locations, str_board):
-    target_clicked = None
-    for loc_clicked in clicked_locations:
-        for i in range(board_height):
-            for j in range(board_width):
-                if math.hypot(int(0.0984375 * screen_width + 0.040390625 * screen_width * j) - loc_clicked[0],
-                              int(0.13625 * screen_height + 0.056125 * screen_height * i) - loc_clicked[1]) < int(
+    def detect_target_clicked(self):
+        target_clicked = None
+        for loc_clicked in self.clicked_locations:
+            for i in range(board_height):
+                for j in range(board_width):
+                    if math.hypot(int(0.0984375 * screen_width + 0.040390625 * screen_width * j) - loc_clicked[0],
+                                  int(0.13625 * screen_height + 0.056125 * screen_height * i) - loc_clicked[1]) < int(
                         0.00576923077 * (screen_height + screen_width)):
-                    if str_board[board_height * i + j] == "y":
-                        target_clicked = (i, j)
-                        break
+                        if self.state.board_str[board_height * i + j] == "y":
+                            target_clicked = (i, j)
+                            break
+                else:
+                    continue
+                break
             else:
                 continue
             break
-        else:
-            continue
-        break
-    return target_clicked
+        return target_clicked
+
+    def draw_captain_board_str(self):
+        for i in range(board_height):
+            for j in range(board_width):
+                c = self.state.board_str[i*board_height + j]
+                if c:
+                    if c == "r":
+                        color = red
+                        pygame.draw.circle(self.screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
+                    elif c == "b":
+                        color = black
+                        pygame.draw.circle(self.screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height* i)), int(0.00576923077*(screen_height+screen_width)))
+                    elif c == "y":
+                        color = yellow
+                        pygame.draw.circle(self.screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
 
 
-def send_to_server_user_actions(network, user_action_str, user_action):
-    network.only_send(user_action_str)
-    return network.send(user_action)
+class FirstMateClient(Client):
+    img_file_name = 'img/FirstMateCard.jpeg'
+
+    def __init__(self, screen, network):
+        super().__init__(screen, network, FirstMateClient.img_file_name)
+        self.powers_rects = []
+        for i in range(2):
+            for j in range(3):
+                self.powers_rects.append(pygame.Rect([143 + 394 * j, 173 + 265 * i, 232, 165]))
+
+    def play_turn(self):
+        power_clicked = Client.detect_rect_clicked(self.powers_rects[:len(self.state.powers_charges)],
+                                                 self.clicked_locations)
+        if power_clicked:
+            self.update_state(self.send_action_to_server("first mate clicked power", self.powers_rects.index(power_clicked)))
+            # power clicked is sent to the server as the index of the power in powerActionsList witch is the same as powers_rects
+
+    def draw(self):
+        self.draw_bg_img()
+        self.draw_charge_bars()
+
+    def draw_charge_bars(self):
+        for power_charge, rect in zip(self.state.powers_charges, self.powers_rects):
+            for k in range(power_charge[0]):
+                pygame.draw.arc(self.screen, red, rect, math.pi/2 - ((k+1) * math.pi/4), math.pi/2 - (k * math.pi/4), 20)
+
+            if self.state.can_act and power_charge[0] < power_charge[1]:
+                pygame.draw.arc(self.screen, yellow, rect, math.pi/2 - ((power_charge[0]+1) * math.pi/4), math.pi/2 - (power_charge[0] * math.pi/4), 20)
 
 
-def is_rect_clicked(rect, clicked_locations):
-    for loc_clicked in clicked_locations:
-        if rect.collidepoint(loc_clicked):
-            return True
-    return False
+class EngineerClient(Client):
+    img_file_name = 'img/EngineerCard.jpeg'
 
-def play_as_captain(network, screen):
-    clock = pygame.time.Clock()
-    FPS = 60
-    screen.fill(blue)
-    game_states = "play"
+    def __init__(self, screen, network):
+        super().__init__(screen, network, EngineerClient.img_file_name)
+        self.tools_rects = [[pygame.Rect([164 + 71 * i + 39 * (i // 3), 418 + j * 76, 60, 50]) for i in range(12)] for j in
+                           range(3)]
 
-    try:
-        can_act, is_stopped, str_board = network.send("captain get")
-    except Exception as e:
-        print(e)
+    def play_turn(self):
+        possible_tools_to_break_rects = [self.tools_rects[tool[0][0]][tool[0][1]] for tool in self.state.tools_state if
+                                         tool[1] == "y"]
+        tool_clicked = Client.detect_rect_clicked(possible_tools_to_break_rects, self.clicked_locations)
 
-    bg_img_data = load_bg_img('img/AlphaMap2.jpeg')
-    stop_button = pygame.Rect(4*screen_width//5, screen_height//2, 150, 150) # stop_button pos
+        if tool_clicked:
+            tool_clicked_cords = \
+            [(i, colour.index(tool_clicked)) for i, colour in enumerate(self.tools_rects) if tool_clicked in colour][0]
+            self.update_state(self.send_action_to_server("engineer clicked tool", tool_clicked_cords))
 
-    while game_states != "exit":
-        # check for update from server
-        got = network.listen(blocking=False)
-        if got:
-            if got == "sending game state":
-                can_act, is_stopped, str_board = network.listen()
+    def draw(self):
+        self.draw_bg_img()
 
-        # collect pygame events
-        clicked_locations = set()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                game_states = "exit"
+        for tool in self.state.tools_state:
+            if tool[1] == "r":
+                self.draw_engineer_tool(red, tool[0])
+            elif tool[1] == "y":
+                self.draw_engineer_tool(yellow, tool[0])
 
-            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                clicked_locations = clicked_locations.union({event.pos}) # add curr pos to the set
-                print(event.pos) # debug
+    def draw_engineer_tool(self, color, cords):
+        pygame.draw.rect(self.screen, color, self.tools_rects[cords[0]][cords[1]], 2)
 
-        # logic
-        if can_act:
-            target_clicked = detect_target_clicked(clicked_locations, str_board)
-            if target_clicked:
-                can_act, is_stopped, str_board = send_to_server_user_actions(network, "captain clicked loc", target_clicked)
+state_class_map = {
+    CaptainClient: CaptainState,
+    FirstMateClient: FirstMateState,
+    EngineerClient: EngineerState,
+    Client: RadioOperatorState
+    }
 
-        if not is_stopped and is_rect_clicked(stop_button, clicked_locations):
-            can_act, is_stopped, str_board = network.send("captain stop")
-
-        # draw
-        draw_captain_screen(screen, bg_img_data, str_board, is_stopped, stop_button)
-        pygame.display.flip()
-        clock.tick(FPS)
-
-    network.close()
-    pygame.quit()
-    sys.exit()
-
-
-def draw_captain_screen(screen, bg_img_data, str_board, is_stopped, stop_button):
-    if is_stopped:
-        draw_stop_screen(screen)
-        return
-
-    screen.blit(bg_img_data[0], bg_img_data[1])
-
-    pygame.draw.rect(screen, black, stop_button)  # draw button
-    message_display(screen, "stop", stop_button.x+stop_button.width//2, stop_button.y+stop_button.height//2, stop_button.width//3)
-
-    draw_captain_str_board(screen, str_board)
-
-
-def draw_captain_str_board(screen, str_board):
-    for i in range(board_height):
-        for j in range(board_width):
-            c = str_board[i*board_height + j]
-            if c:
-                if c == "r":
-                    color = red
-                    pygame.draw.circle(screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
-                elif c == "b":
-                    color = black
-                    pygame.draw.circle(screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height* i)), int(0.00576923077*(screen_height+screen_width)))
-                elif c == "y":
-                    color = yellow
-                    pygame.draw.circle(screen, color, (int(0.0984375*screen_width + 0.040390625*screen_width * j), int(0.13625*screen_height + 0.056125*screen_height * i)), int(0.00576923077*(screen_height+screen_width)))
-
-
-def play_as_first_mate(network, screen):
-    clock = pygame.time.Clock()
-    FPS = 60
-    screen.fill(blue)
-    game_states = "play"
-
-    try:
-        can_act, is_stopped, powers_charges, hp = network.send("first mate get")
-    except Exception as e:
-        print(e)
-
-    bg_img_data = load_bg_img('img/FirstMateCard.jpeg')
-
-    powers_rects = []
-    for i in range(2):
-        for j in range(3):
-            powers_rects.append(pygame.Rect([143 + 394 * j, 173 + 265 * i, 232, 165]))
-
-    while game_states != "exit":
-        # check for update from server
-        got = network.listen(blocking=False)
-        if got:
-            if got == "sending game state":
-                can_act, is_stopped, powers_charges, hp = network.listen()
-
-        # collect pygame events
-        clicked_locations = set()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                game_states = "exit"
-
-            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                clicked_locations = clicked_locations.union({event.pos})
-                print(event.pos)
-
-        #logic
-        if can_act:
-            power_clicked = detect_power_clicked(powers_rects[:len(powers_charges)], clicked_locations)
-            if power_clicked:
-                can_act, is_stopped, powers_charges, hp = send_to_server_user_actions(network, "first mate clicked power", powers_rects.index(power_clicked))
-                # power clicked is sent to the server as the index of the power in powerActionsList witch is the same as powers_rects
-
-        # draw
-        draw_first_mate_screen(screen, bg_img_data, is_stopped, powers_rects, powers_charges, can_act)
-        pygame.display.flip()
-        clock.tick(FPS)
-
-    network.close()
-    pygame.quit()
-    sys.exit()
-
-
-
-def detect_power_clicked(rects_list, clicked_locations):
-    for rect in rects_list:
-        if is_rect_clicked(rect, clicked_locations):
-            return rect
-
-    return None
-
-
-def draw_first_mate_screen(screen, bg_img_data, is_stopped, powers_rects, powers_charges, can_act):
-    if is_stopped:
-        screen.fill(black)
-        message_display(screen, "stop")
-        return
-
-    screen.blit(bg_img_data[0], bg_img_data[1])
-
-    draw_charge_bars(screen, powers_charges, powers_rects, can_act)
-
-
-def draw_charge_bars(screen, powers_charges, powers_rects, can_act):
-    for power_charge, rect in zip(powers_charges, powers_rects):
-        for k in range(power_charge[0]):
-            pygame.draw.arc(screen, red, rect, math.pi/2 - ((k+1) * math.pi/4), math.pi/2 - (k * math.pi/4), 20)
-
-        if can_act and power_charge[0] < power_charge[1]:
-            pygame.draw.arc(screen, yellow, rect, math.pi/2 - ((power_charge[0]+1) * math.pi/4), math.pi/2 - (power_charge[0] * math.pi/4), 20)
-
-
-def play_as_engineer(network, screen):
-    clock = pygame.time.Clock()
-    FPS = 60
-    screen.fill(blue)
-    game_states = "play"
-
-    try:
-        can_act, is_stopped, tools_state = network.send("engineer get")
-    except Exception as e:
-        print(e)
-
-    bg_img_data = load_bg_img('img/EngineerCard.jpeg')
-    tools_rects = []
-    for j in range(3):
-        tools_rects_row = []
-        for i in range(12):
-            tools_rects_row.append(pygame.Rect([164 + 71*i + 39*(i//3),418 + j*76,60,50]))
-        tools_rects.append(tools_rects_row)
-
-    while game_states != "exit":
-        # check for update from server
-        got = network.listen(blocking=False)
-        if got:
-            if got == "sending game state":
-                can_act, is_stopped, tools_state = network.listen()
-
-        # collect pygame events
-        clicked_locations = set()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                game_states = "exit"
-
-            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                clicked_locations = clicked_locations.union({event.pos})
-                print(event.pos)
-
-        # logic
-        if can_act:
-            possible_tools_to_break_rects = []
-            for tool in tools_state:
-                if tool[1] == "y":
-                    possible_tools_to_break_rects.append(tools_rects[tool[0][0]][tool[0][1]])
-            tool_clicked = detect_power_clicked(possible_tools_to_break_rects, clicked_locations)
-            if tool_clicked:
-                tool_clicked_cords = [(i, colour.index(tool_clicked)) for i, colour in enumerate(tools_rects) if tool_clicked in colour][0]
-                can_act, is_stopped, tools_state = send_to_server_user_actions(network, "engineer clicked tool", tool_clicked_cords)
-
-        # draw
-        draw_engineer_screen(screen, bg_img_data, is_stopped, tools_state, tools_rects)
-        pygame.display.flip()
-        clock.tick(FPS)
-
-    network.close()
-    pygame.quit()
-    sys.exit()
-
-
-def draw_engineer_screen(screen, bg_img_data, is_stopped, tools_state, tools_rects):
-    if is_stopped:
-        screen.fill(black)
-        message_display(screen, "stop")
-        return
-    screen.blit(bg_img_data[0], bg_img_data[1])
-
-    for tool in tools_state:
-        if tool[1] == "r":
-            draw_engineer_tool(screen, red, tools_rects, tool[0])
-        elif tool[1] == "y":
-            draw_engineer_tool(screen, yellow, tools_rects, tool[0])
-
-
-def draw_engineer_tool(screen, color, tools_rects, cords):
-    pygame.draw.rect(screen, color, tools_rects[cords[0]][cords[1]], 2)
 
 
 
@@ -438,14 +327,14 @@ def play_as_radio_operator(network, screen):
     select_tool_cells_selected = []
     select_tool_rect = None
 
-    bg_img_data = load_bg_img('img/AlphaMap2.jpeg')
+    bg_img_data = Client.load_bg_img('img/AlphaMap2.jpeg')
 
     try:
-        is_stopped, last_enemy_move_direction = network.send("radio operator get")
+        is_game_stopped, last_enemy_move_direction = network.send("get")
     except Exception as e:
         print(e)
 
-    if is_stopped:
+    if is_game_stopped:
         selected_tool = BRUSH
         b_pen_tool.clicked = True
 
@@ -454,7 +343,7 @@ def play_as_radio_operator(network, screen):
         got = network.listen(blocking=False)
         if got:
             if got == "sending game state":
-                is_stopped, last_enemy_move_direction = network.listen()
+                is_game_stopped, last_enemy_move_direction = network.listen()
 
         # collect pygame events
         mouse_locations = set()
@@ -533,7 +422,7 @@ def play_as_radio_operator(network, screen):
             select_tool_rect = None
             select_tool_cells_selected = None
 
-        if not is_stopped:
+        if not is_game_stopped:
             for mouse_pos in mouse_locations:
                 if selected_tool == BRUSH:
                     drawing_cells_list.append(DrawingCell(mouse_pos))
@@ -542,15 +431,15 @@ def play_as_radio_operator(network, screen):
                                           not drawing_cell.rect.collidepoint(mouse_pos)]
 
         # draw
-        draw_radio_operator_screen(screen, is_stopped, last_enemy_move_direction, bg_img_data, drawing_cells_list, buttons, selected_tool, select_tool_rect)
+        draw_radio_operator_screen(screen, is_game_stopped, last_enemy_move_direction, bg_img_data, drawing_cells_list, buttons, selected_tool, select_tool_rect)
         pygame.display.flip()
         clock.tick(FPS)
 
     pygame.quit()
     sys.exit()
 
-def draw_radio_operator_screen(screen, is_stopped, last_enemy_move_direction, bg_img_data, drawing_cells_list, buttons, selected_tool, select_tool_rect):
-    if is_stopped:
+def draw_radio_operator_screen(screen, is_game_stopped, last_enemy_move_direction, bg_img_data, drawing_cells_list, buttons, selected_tool, select_tool_rect):
+    if is_game_stopped:
         screen.fill(black)
         message_display(screen, "stop")
         return
@@ -574,25 +463,23 @@ def start_the_game(network, screen, my_pick):
     try:
         my_role = my_pick[1]
         if my_role == CAPTAIN:
-            play_as_captain(network, screen)
+            client = CaptainClient(screen, network)
+            client.play()
         elif my_role == FIRST_MATE:
-            play_as_first_mate(network, screen)
+            client = FirstMateClient(screen, network)
+            client.play()
         elif my_role == ENGINEER:
-            play_as_engineer(network, screen)
+            client = EngineerClient(screen, network)
+            client.play()
         elif my_role == RADIO_OPERATOR:
-            play_as_radio_operator(network, screen)
+            play_as_radio_operator(screen, network)
 
     except Exception as e:
         network.close()
         raise e
 
 
-def load_bg_img(img):
-    background_image = pygame.image.load(img)
-    background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
-    background_image_rect = background_image.get_rect()
-    background_image_rect.left, background_image_rect.top = [0, 0]
-    return background_image, background_image_rect
+
 
 
 def draw_stop_screen(screen):
@@ -648,5 +535,6 @@ def main():
 
     start_game_menu.mainloop(screen)
 
-if __name__ == '__main__':
-    main()
+#if __name__ == '__main__':
+#    main()
+main()

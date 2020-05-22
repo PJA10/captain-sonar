@@ -45,7 +45,7 @@ class CaptainPlayer(Player):
             self.submarine.move(target)
 
     def get_state(self, game):
-        return CaptainState(self, game)
+        return CaptainState.from_player(self, game)
 
 
 class FirstMatePlayer(Player):
@@ -62,7 +62,7 @@ class FirstMatePlayer(Player):
         return powers_charges
 
     def get_state(self, game):
-        return FirstMateState(self, game)
+        return FirstMateState.from_player(self, game)
 
     def load_power(self, power_clicked_index):
         if self.submarine.powerActionsList[power_clicked_index].can_load():
@@ -78,7 +78,7 @@ class EngineerPlayer(Player):
         return not self.submarine.is_engineer_check
 
     def get_state(self, game):
-        return EngineerState(self, game)
+        return EngineerState.from_player(self, game)
 
     def get_tools_state(self):
         tools_state = []
@@ -109,7 +109,7 @@ class RadioOperatorPlayer(Player):
         return True
 
     def get_state(self, game):
-        return RadioOperatorState(self, game)
+        return RadioOperatorState.from_player(self, game)
 
 
 class State:
@@ -139,7 +139,7 @@ class CaptainState(State):
 
     @classmethod
     def from_player(cls, player, game):
-        state = super.from_player(player, game)
+        state = State.from_player(player, game)
         return cls(state.can_act, state.is_game_stopped, player.get_board_str(game))
 
 
@@ -151,7 +151,7 @@ class FirstMateState(State):
 
     @classmethod
     def from_player(cls, player, game):
-        state = super().__init__(player, game)
+        state = State.from_player(player, game)
         return cls(state.can_act, state.is_game_stopped, player.get_powers_charges(), player.submarine.hp)
 
 
@@ -162,7 +162,7 @@ class EngineerState(State):
 
     @classmethod
     def from_player(cls, player, game):
-        state = super().__init__(player, game)
+        state = State.from_player(player, game)
         return cls(state.can_act, state.is_game_stopped, player.get_tools_state())
     
 
@@ -174,7 +174,7 @@ class RadioOperatorState(State):
 
     @classmethod
     def from_player(cls, player, game):
-        state = super().__init__(player, game)
+        state = State.from_player(player, game)
         del state.__dict__["can_act"]
         enemy_submarine = player.submarine.get_enemy_submarine(game)
         last_enemy_move_direction = f"{len(enemy_submarine.path)}. " + enemy_submarine.last_move_direction
