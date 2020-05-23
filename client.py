@@ -526,9 +526,8 @@ state_class_map = {
 }
 
 
-def start_the_game(network, screen, my_pick):
+def play_role(network, screen, my_role):
     try:
-        my_role = my_pick[1]
         if my_role == CAPTAIN:
             client = CaptainClient(screen, network)
         elif my_role == FIRST_MATE:
@@ -540,24 +539,26 @@ def start_the_game(network, screen, my_pick):
 
         client.play()
 
-
-    except Exception as e:
+    finally:
         network.close()
-        raise e
 
 
-def choose_team(network, my_pick):
-    server_respond = network.send(my_pick)
-    if server_respond == "ok":
-        return True
+def pick_team(network, my_pick):
+    """
+    Sends team & role pick to server, returns True if the pick was accepted
+    """
+    server_response = network.send(my_pick)
+    return server_response == "ok"
 
 
-def try_start_game(network, screen, my_picking_selectors, start_game_menu):
-    my_pick = (my_picking_selectors[0].get_value()[1], my_picking_selectors[1].get_value()[1])
-    choose_team_result = choose_team(network, my_pick)
-    if choose_team_result:
-        start_the_game(network, screen, my_pick)
+def start_game(network, screen, team_selector, role_selector, start_game_menu):
+    my_pick = (my_team, my_role) = team_selector.get_value()[1], role_selector.get_value()[1]
+
+    if pick_team(network, my_pick):  # team & role pick was accepted
+        play_role(network, screen, my_role)
+
     else:
+        # role is taken, notify user
         if not start_game_menu.get_widget("role taken"):
             start_game_menu.add_label("role taken", "role taken")
 
@@ -577,7 +578,7 @@ def main():
     team_selector = start_game_menu.add_selector('Team :', [('blue', BLUE_TEAM), ('yellow', YELLOW_TEAM)])
     role_selector = start_game_menu.add_selector('Role :', [('captain', CAPTAIN), ('first mate', FIRST_MATE), ('engineer', ENGINEER),
                                             ('radio operator', RADIO_OPERATOR)])
-    start_game_menu.add_button('Play', try_start_game, network, screen, (team_selector, role_selector), start_game_menu)
+    start_game_menu.add_button('Play', start_game, network, screen, team_selector, role_selector, start_game_menu)
     start_game_menu.add_button('Quit', pygame_menu.events.EXIT)
 
     start_game_menu.mainloop(screen)
