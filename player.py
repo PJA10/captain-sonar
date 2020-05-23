@@ -133,10 +133,6 @@ class State:
     def from_player(cls, player, game):
         return cls(player.is_can_act(), game.is_stopped)
 
-    # @classmethod
-    # def from_tuple(cls, data_tuple):
-    #     return cls(data_tuple[0], data_tuple[1])
-
     def __eq__(self, other):
         return tuple(self) == tuple(other)
 
