@@ -63,12 +63,12 @@ def threaded_client(conn, this_player_id):
                 if data == "get": # client init
                     current_player_state = this_player.get_state(game)
 
-                # captain stuff
-                elif "clicked" in data:
+                elif "clicked" in data: # user acted and the client will send what he clicked on
                     target_clicked = recv(conn)
                     this_player.clicked(game, target_clicked)
                     current_player_state = this_player.get_state(game)
 
+                # captain stuff
                 elif data == "captain stop":
                     game.is_stopped = True
                     current_player_state = this_player.get_state(game)
