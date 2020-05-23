@@ -18,7 +18,7 @@ class Player:
     def get_state(self, game):
         pass
 
-    def is_can_act(self):
+    def can_act(self):
         pass
 
 
@@ -26,10 +26,10 @@ class CaptainPlayer(Player):
     def __init__(self, team, role, submarine):
         super().__init__(team, role, submarine)
 
-    def is_can_act(self):
+    def can_act(self):
         return self.submarine.can_move
 
-    def get_board_str(self, game):
+    def get_board_string(self, game):
         board_str = ""
         for i in range(board_width):
             for j in range(board_height):
@@ -37,7 +37,7 @@ class CaptainPlayer(Player):
                     board_str += "b" # submarine location is marked b for black
                 elif (i, j) in self.submarine.path:
                     board_str += "r"  # submarine past locations are marked r for red
-                elif self.is_can_act() and gameFile.Game.in_map((i, j)) and not game.board[i][j].is_island and (i, j) not in self.submarine.path and math.hypot(i - self.submarine.loc[0], j - self.submarine.loc[1]) == 1:
+                elif self.can_act() and gameFile.Game.in_map((i, j)) and not game.board[i][j].is_island and (i, j) not in self.submarine.path and math.hypot(i - self.submarine.loc[0], j - self.submarine.loc[1]) == 1:
                     board_str += "y"  # possible move loc marked y for yellow
                 else:
                     board_str += "w" # white for nothing
@@ -58,7 +58,7 @@ class FirstMatePlayer(Player):
     def __init__(self, team, role, submarine):
         super().__init__(team, role, submarine)
 
-    def is_can_act(self):
+    def can_act(self):
         return not self.submarine.is_first_mate_check
 
     def get_powers_charges(self):
@@ -83,7 +83,7 @@ class EngineerPlayer(Player):
     def __init__(self, team, role, submarine):
         super().__init__(team, role, submarine)
 
-    def is_can_act(self):
+    def can_act(self):
         return not self.submarine.is_engineer_check
 
     def get_state(self, game):
@@ -94,7 +94,7 @@ class EngineerPlayer(Player):
         for tool in self.submarine.tools:
             if tool.is_broken:
                 tools_state.append((tool.cords, "r"))
-            elif self.is_can_act() and tool.direction == self.submarine.last_move_direction:
+            elif self.can_act() and tool.direction == self.submarine.last_move_direction:
                 tools_state.append((tool.cords, "y"))
         return tools_state
 
@@ -117,7 +117,7 @@ class RadioOperatorPlayer(Player):
         super().__init__(team, role, submarine)
         self.submarine.engineer = self
 
-    def is_can_act(self):
+    def can_act(self):
         return True
 
     def get_state(self, game):
@@ -131,7 +131,7 @@ class State:
 
     @classmethod
     def from_player(cls, player, game):
-        return cls(player.is_can_act(), game.is_stopped)
+        return cls(player.can_act(), game.is_stopped)
 
     def __eq__(self, other):
         return tuple(self) == tuple(other)
@@ -148,7 +148,7 @@ class CaptainState(State):
     @classmethod
     def from_player(cls, player, game):
         state = State.from_player(player, game)
-        return cls(state.can_act, state.is_game_stopped, player.get_board_str(game))
+        return cls(state.can_act, state.is_game_stopped, player.get_board_string(game))
 
 
 class FirstMateState(State):

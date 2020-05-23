@@ -53,7 +53,7 @@ class Button:
                  (self.pos[0], self.pos[1]))
 
 
-class Client:
+class PlayerClient:
     """
     Base class representing a player behavior in the client
     Main method `play()` handles the client main loop
@@ -61,7 +61,7 @@ class Client:
     """
     FPS = 60
     game_states = "play"
-    img_file_name = None
+    image_filename = None
 
     def __init__(self, screen, network):
         """
@@ -72,7 +72,7 @@ class Client:
         self.clock = pygame.time.Clock()
         self.state = None
         self.clicked_locations = set()
-        self.bg_img_data = self.load_bg_img()
+        self.background_image = self.load_background_image()
 
     def play(self):
         """
@@ -115,7 +115,7 @@ class Client:
                 self.draw_stop_screen()
 
             else:
-                self.draw_bg_img()
+                self.draw_background_image()
                 self.draw()
 
             pygame.display.flip()
@@ -185,7 +185,7 @@ class Client:
         Draws a black screen for stop mode
         """
         self.screen.fill(black)
-        self.message_display("stop")
+        self.display_message("stop")
 
     def send_action_to_server(self, action_name, action_value):
         """
@@ -220,11 +220,11 @@ class Client:
         """
         pass
 
-    def draw_bg_img(self):
+    def draw_background_image(self):
         """
         Draws the background image
         """
-        self.screen.blit(self.bg_img_data[0], self.bg_img_data[1])
+        self.screen.blit(self.background_image[0], self.background_image[1])
 
     def end_game(self):
         """
@@ -253,7 +253,7 @@ class Client:
         Otherwise returns None
         """
         for rect in rects_list:
-            if Client.is_rect_clicked(rect, clicked_locations):
+            if PlayerClient.is_rect_clicked(rect, clicked_locations):
                 return rect
         return None
 
@@ -265,32 +265,32 @@ class Client:
         text_surface = font.render(text, True, white)
         return text_surface, text_surface.get_rect()
 
-    def message_display(self, text, x=screen_width / 2, y=screen_height / 2, size=100,
+    def display_message(self, text, x=screen_width / 2, y=screen_height / 2, size=100,
                         font='comicsansms'):
         """
         Displays message in the given location at the screen
         """
         large_text = pygame.font.SysFont(font, size)
-        text_surf, text_rect = Client.text_objects(text, large_text)
+        text_surf, text_rect = PlayerClient.text_objects(text, large_text)
         text_rect.center = (x, y)
         self.screen.blit(text_surf, text_rect)
 
-    def load_bg_img(self):
+    def load_background_image(self):
         """
         Loads the background image
         """
-        background_image = pygame.image.load(self.img_file_name)
+        background_image = pygame.image.load(self.image_filename)
         background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
         background_image_rect = background_image.get_rect()
         background_image_rect.left, background_image_rect.top = [0, 0] # top left pos
         return background_image, background_image_rect
 
 
-class CaptainClient(Client):
+class CaptainClient(PlayerClient):
     """
     This class implements all client logic of the Captain player
     """
-    img_file_name = 'img/AlphaMap2.jpeg'
+    image_filename = 'img/AlphaMap2.jpeg'
 
     def __init__(self, screen, network):
         super().__init__(screen, network)
@@ -306,13 +306,13 @@ class CaptainClient(Client):
 
     def play_every_turn(self):
         if not self.state.is_game_stopped \
-           and Client.is_rect_clicked(self.stop_button, self.clicked_locations):
+           and PlayerClient.is_rect_clicked(self.stop_button, self.clicked_locations):
             self.update_state(self.network.send("captain stop"))
 
     def draw(self):
         # draw stop button
         pygame.draw.rect(self.screen, black, self.stop_button)
-        self.message_display("stop",
+        self.display_message("stop",
                              self.stop_button.x + self.stop_button.width // 2,
                              self.stop_button.y + self.stop_button.height // 2,
                              self.stop_button.width // 3)
@@ -359,11 +359,11 @@ class CaptainClient(Client):
                         pygame.draw.circle(self.screen, color, *circle_params)
 
 
-class FirstMateClient(Client):
+class FirstMateClient(PlayerClient):
     """
     This class implements all client logic of the First Mate player
     """
-    img_file_name = 'img/FirstMateCard.jpeg'
+    image_filename = 'img/FirstMateCard.jpeg'
 
     def __init__(self, screen, network):
         super().__init__(screen, network)
@@ -372,7 +372,7 @@ class FirstMateClient(Client):
                              for j in range(power_cols)]
 
     def play_player_act_turn(self):
-        power_clicked = Client.detect_rect_clicked(
+        power_clicked = PlayerClient.detect_rect_clicked(
                         self.powers_rects[:len(self.state.powers_charges)],
                         self.clicked_locations)
 
@@ -402,11 +402,11 @@ class FirstMateClient(Client):
                                 start_angle - (power_charge[0] * one_arch_angle), arch_border_width)
 
 
-class EngineerClient(Client):
+class EngineerClient(PlayerClient):
     """
     This class implements all client logic of the Engineer player
     """
-    img_file_name = 'img/EngineerCard.jpeg'
+    image_filename = 'img/EngineerCard.jpeg'
 
     def __init__(self, screen, network):
         super().__init__(screen, network)
@@ -417,7 +417,7 @@ class EngineerClient(Client):
     def play_player_act_turn(self):
         possible_tools_to_break_rects = [self.tools_rects[tool[0][0]][tool[0][1]]
                                          for tool in self.state.tools_state if tool[1] == "y"]
-        tool_clicked = Client.detect_rect_clicked(possible_tools_to_break_rects,
+        tool_clicked = PlayerClient.detect_rect_clicked(possible_tools_to_break_rects,
                                                   self.clicked_locations)
 
         if tool_clicked:
@@ -442,11 +442,11 @@ class EngineerClient(Client):
         pygame.draw.rect(self.screen, color, self.tools_rects[cords[0]][cords[1]], border_width)
 
 
-class RadioOperatorClient(Client):
+class RadioOperatorClient(PlayerClient):
     """
     This class implements all client logic of the Radio Operator player
     """
-    img_file_name = 'img/AlphaMap2.jpeg'
+    image_filename = 'img/AlphaMap2.jpeg'
 
     def __init__(self, screen, network):
         super().__init__(screen, network)
@@ -566,8 +566,8 @@ class RadioOperatorClient(Client):
         for cell in self.drawing_cells_list:
             cell.draw(self.screen)
 
-        self.message_display("Tools", screen_width / 5 * 4, 30, 25)
-        self.message_display(self.state.last_enemy_move_direction, screen_width / 5 * 4, 400, 40)
+        self.display_message("Tools", screen_width / 5 * 4, 30, 25)
+        self.display_message(self.state.last_enemy_move_direction, screen_width / 5 * 4, 400, 40)
         pygame.draw.rect(self.screen, (180, 180, 180), (screen_width / 5 * 4 - 30, 50, 170, 100))
         for but in self.buttons:
             but.draw(self.screen)
