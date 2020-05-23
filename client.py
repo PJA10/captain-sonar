@@ -184,7 +184,7 @@ class Client:
         Draws a black screen for stop mode
         """
         self.screen.fill(black)
-        self.message_display(self.screen, "stop")
+        self.message_display("stop")
 
     def send_action_to_server(self, action_name, action_value):
         """

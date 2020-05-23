@@ -12,6 +12,9 @@ class Player:
     def disconnected(self):
         self.online = False
 
+    def clicked(self, game, target):
+        pass
+
     def get_state(self, game):
         pass
 
@@ -41,6 +44,9 @@ class CaptainPlayer(Player):
         return board_str
 
     def clicked(self, game, target):
+        self.move_submarine_to(game, target)
+
+    def move_submarine_to(self, game, target):
         if gameFile.Game.in_map(target) and not game.board[target[0]][target[1]].is_island and target not in self.submarine.path and math.hypot(target[0] - self.submarine.loc[0], target[1] - self.submarine.loc[1]) == 1:
             self.submarine.move(target)
 
@@ -60,6 +66,9 @@ class FirstMatePlayer(Player):
         for powerAction in self.submarine.powerActionsList:
             powers_charges.append((powerAction.charge, powerAction.max_charge))
         return powers_charges
+
+    def clicked(self, game, power_clicked_index):
+        self.load_power(power_clicked_index)
 
     def get_state(self, game):
         return FirstMateState.from_player(self, game)
@@ -88,6 +97,9 @@ class EngineerPlayer(Player):
             elif self.is_can_act() and tool.direction == self.submarine.last_move_direction:
                 tools_state.append((tool.cords, "y"))
         return tools_state
+
+    def clicked(self, game, tool_to_brake_cords):
+        self.brake_tool(tool_to_brake_cords)
 
     def brake_tool(self, tool_to_brake_cords):
         tool_to_brake = None

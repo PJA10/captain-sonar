@@ -64,27 +64,14 @@ def threaded_client(conn, this_player_id):
                     current_player_state = this_player.get_state(game)
 
                 # captain stuff
-                elif data == "captain clicked loc":
+                elif "clicked" in data:
                     target_clicked = recv(conn)
                     this_player.clicked(game, target_clicked)
                     current_player_state = this_player.get_state(game)
+
                 elif data == "captain stop":
                     game.is_stopped = True
                     current_player_state = this_player.get_state(game)
-
-                # first mate stuff
-                elif data == "first mate clicked power":
-                    power_clicked_index = recv(conn)
-                    # power clicked is sent to the server as the index of the power in powerActionsList witch is the same as powers_rects
-                    this_player.load_power(power_clicked_index)
-                    current_player_state = this_player.get_state(game)
-
-                # engineer stuff
-                elif data == "engineer clicked tool":
-                    tool_to_brake_cords = recv(conn)
-                    this_player.brake_tool(tool_to_brake_cords)
-                    current_player_state = this_player.get_state(game)
-
 
                 send_msg(conn, tuple(current_player_state))
 
