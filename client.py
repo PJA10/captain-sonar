@@ -151,7 +151,7 @@ class Client:
         Respond to user mouse button press
         """
         self.clicked_locations = self.clicked_locations.union({event.pos})  # add curr pos to the set
-        print(event.pos)  # debug
+        print(event.pos)  # TODO: debug
 
     def update_state(self, state_tuple):
         """
@@ -300,21 +300,29 @@ class CaptainClient(Client):
         # draw stop button
         pygame.draw.rect(self.screen, black, self.stop_button)
         self.message_display("stop", self.stop_button.x + self.stop_button.width // 2, self.stop_button.y + self.stop_button.height // 2,
-                        self.stop_button.width // 3)
+                             self.stop_button.width // 3)
 
         self.draw_captain_board()
 
     def detect_target_clicked(self):
+        """
+        Check if one of the target circles (optional step) was clicked
+        If so, return the coordinates of the circle
+        Otherwise return None
+        """
         for loc_clicked in self.clicked_locations:
             for i in range(board_height):
                 for j in range(board_width):
                     if math.hypot(int(0.0984375 * screen_width + 0.040390625 * screen_width * j) - loc_clicked[0],
-                                  int(0.13625 * screen_height + 0.056125 * screen_height * i) - loc_clicked[1]) < int(
-                        0.00576923077 * (screen_height + screen_width)):
+                                  int(0.13625 * screen_height + 0.056125 * screen_height * i) - loc_clicked[1]) < \
+                                  int(0.00576923077 * (screen_height + screen_width)):
                         if self.state.board_str[board_height * i + j] == "y":
                             return i, j
 
     def draw_captain_board(self):
+        """
+        Draws the captain board according to the current state
+        """
         for i in range(board_height):
             for j in range(board_width):
                 char = self.state.board_str[i * board_height + j]
@@ -338,23 +346,23 @@ class FirstMateClient(Client):
 
     def __init__(self, screen, network):
         super().__init__(screen, network)
-        self.powers_rects = []
-
-        for i in range(power_rows):
-            for j in range(power_cols):
-                self.powers_rects.append(pygame.Rect([143 + 394 * j, 173 + 265 * i, 232, 165]))
+        self.powers_rects = [pygame.Rect([143 + 394 * j, 173 + 265 * i, 232, 165]) for i in range(power_rows)
+                             for j in range(power_cols)]
 
     def play_player_act_turn(self):
         power_clicked = Client.detect_rect_clicked(self.powers_rects[:len(self.state.powers_charges)],
-                                                 self.clicked_locations)
+                                                   self.clicked_locations)
         if power_clicked:
+            # power clicked is sent to the server as the index of the power in powerActionsList which is the same as powers_rects
             self.update_state(self.send_action_to_server("first mate clicked power", self.powers_rects.index(power_clicked)))
-            # power clicked is sent to the server as the index of the power in powerActionsList witch is the same as powers_rects
 
     def draw(self):
         self.draw_charge_bars()
 
     def draw_charge_bars(self):
+        """
+        Draws the charge bars of each power of the first mate
+        """
         start_angle = math.pi/2
         one_arch_angle = math.pi/4
         arch_border_width = 20
@@ -392,6 +400,9 @@ class EngineerClient(Client):
                 self.draw_engineer_tool(yellow, tool[0])
 
     def draw_engineer_tool(self, color, cords):
+        """
+        Draws a tool of the engineer
+        """
         border_width = 2
         pygame.draw.rect(self.screen, color, self.tools_rects[cords[0]][cords[1]], border_width)
 
@@ -527,6 +538,9 @@ state_class_map = {
 
 
 def play_role(network, screen, my_role):
+    """
+    Starts the player client of the specified role
+    """
     try:
         if my_role == CAPTAIN:
             client = CaptainClient(screen, network)
@@ -552,6 +566,10 @@ def pick_team(network, my_pick):
 
 
 def start_game(network, screen, team_selector, role_selector, start_game_menu):
+    """
+    Responds to main menu Play button
+    Validates team & role pick and starts the player client
+    """
     my_pick = (my_team, my_role) = team_selector.get_value()[1], role_selector.get_value()[1]
 
     if pick_team(network, my_pick):  # team & role pick was accepted
