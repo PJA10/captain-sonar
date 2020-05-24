@@ -1,7 +1,7 @@
 import time
 
 from player import CaptainState, FirstMateState
-from gameFile import *
+from game import *
 from _thread import *
 import sys, os
 from network import *
