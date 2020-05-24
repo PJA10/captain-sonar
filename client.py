@@ -108,7 +108,9 @@ class PlayerClient:
                     self.key_released(event)
 
             # logic
-            self.play_turn()
+            if self.state.can_act:
+                self.play_turn()
+            self.play_outside_of_turn()
 
             # draw
             if self.state.is_game_stopped:
@@ -198,19 +200,11 @@ class PlayerClient:
         """
         This function commits the logic of a single turn
         """
-        if self.state.can_act:
-            self.play_player_act_turn()
-        self.play_every_turn()
-
-    def play_player_act_turn(self):
-        """
-        This function commits the logic of a single turn when the player can act
-        """
         pass
 
-    def play_every_turn(self):
+    def play_outside_of_turn(self):
         """
-        This function commits the logic of every single turn
+        This function commits the logic that is done after the turn is finished
         """
         pass
 
@@ -299,12 +293,12 @@ class CaptainClient(PlayerClient):
                                        screen_height // 5,
                                        screen_height // 5)
 
-    def play_player_act_turn(self):
+    def play_turn(self):
         target_clicked = self.detect_target_clicked()
         if target_clicked:
             self.update_state(self.send_action_to_server("captain clicked loc", target_clicked))
 
-    def play_every_turn(self):
+    def play_outside_of_turn(self):
         if not self.state.is_game_stopped \
            and PlayerClient.is_rect_clicked(self.stop_button, self.clicked_locations):
             self.update_state(self.network.send("captain stop"))
@@ -371,7 +365,7 @@ class FirstMateClient(PlayerClient):
                              for i in range(power_rows)
                              for j in range(power_cols)]
 
-    def play_player_act_turn(self):
+    def play_turn(self):
         power_clicked = PlayerClient.detect_rect_clicked(
                         self.powers_rects[:len(self.state.powers_charges)],
                         self.clicked_locations)
@@ -414,7 +408,7 @@ class EngineerClient(PlayerClient):
                              for i in range(tools_cols)]
                             for j in range(tools_rows)]
 
-    def play_player_act_turn(self):
+    def play_turn(self):
         possible_tools_to_break_rects = [self.tools_rects[tool[0][0]][tool[0][1]]
                                          for tool in self.state.tools_state if tool[1] == "y"]
         tool_clicked = PlayerClient.detect_rect_clicked(possible_tools_to_break_rects,
