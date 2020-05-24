@@ -123,8 +123,6 @@ class PlayerClient:
             pygame.display.flip()
             self.clock.tick(self.FPS)
 
-        self.end_game()
-
     def key_released(self, event):
         """
         Respond to user keyboard key release
@@ -219,14 +217,6 @@ class PlayerClient:
         Draws the background image
         """
         self.screen.blit(self.background_image[0], self.background_image[1])
-
-    def end_game(self):
-        """
-        Ends and closes the game
-        """
-        self.network.close()
-        pygame.quit()
-        sys.exit()
 
     @staticmethod
     def is_rect_clicked(rect, clicked_locations):
@@ -597,6 +587,8 @@ def play_role(network, screen, my_role):
 
     finally:
         network.close()
+        pygame.quit()
+        sys.exit()
 
 
 def start_game(network, screen, team_selector, role_selector, start_game_menu):
