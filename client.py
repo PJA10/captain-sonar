@@ -309,14 +309,14 @@ class CaptainClient(PlayerClient):
         If so, return the coordinates of the circle
         Otherwise return None
         """
-        for loc_clicked in self.clicked_locations:
+        for clicked_x, clicked_y in self.clicked_locations:
             for i in range(board_height):
                 for j in range(board_width):
-                    if math.hypot(int(0.0984375 * screen_width + 0.040390625 * screen_width * j) \
-                                  - loc_clicked[0],
-                                  int(0.13625 * screen_height + 0.056125 * screen_height * i) \
-                                  - loc_clicked[1]) < \
-                                  int(0.00576923077 * (screen_height + screen_width)):
+                    # params of the (i, j) circle in the board
+                    (circle_x, circle_y), circle_radius = self.get_board_circle_params(i, j)
+
+                    # if clicked location is in the (i, j) circle and the circle is yellow
+                    if math.hypot(circle_x - clicked_x, circle_y - clicked_y) < circle_radius:
                         if self.state.board_str[board_height * i + j] == "y":
                             return (i, j)
         return None
@@ -328,9 +328,8 @@ class CaptainClient(PlayerClient):
         for i in range(board_height):
             for j in range(board_width):
                 char = self.state.board_str[i * board_height + j]
-                circle_params = ((int(0.0984375 * screen_width + 0.040390625 * screen_width * j),
-                                  int(0.13625 * screen_height + 0.056125 * screen_height * i)),
-                                 int(0.00576923077 * (screen_height + screen_width)))
+                circle_params = self.get_board_circle_params(i, j)
+
                 if char:
                     if char == "r":
                         color = red
@@ -341,6 +340,16 @@ class CaptainClient(PlayerClient):
                     elif char == "y":
                         color = yellow
                         pygame.draw.circle(self.screen, color, *circle_params)
+
+    @staticmethod
+    def get_board_circle_params(i, j):
+        """
+        Gets grid coordinates i, j and returns circle params of the board circle
+        """
+        x = int(0.0984375 * screen_width + 0.040390625 * screen_width * j)
+        y = int(0.13625 * screen_height + 0.056125 * screen_height * i)
+        radius = int(0.00576923077 * (screen_height + screen_width))
+        return (x, y), radius
 
 
 class FirstMateClient(PlayerClient):
