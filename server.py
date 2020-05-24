@@ -46,9 +46,9 @@ def threaded_client(conn, this_player_id):
                 send_msg(conn, "role taken")
                 break
 
-        # if role is not taken, sends back "ok"
+        # if role is accepted
         else:
-            send_msg(conn, "ok")
+            send_msg(conn, "role accepted")
             this_player = game.add_new_player(this_player_team, this_player_role)
             break
 

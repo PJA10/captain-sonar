@@ -599,26 +599,21 @@ def play_role(network, screen, my_role):
         network.close()
 
 
-def pick_team(network, my_pick):
-    """
-    Sends team & role pick to server, returns True if the pick was accepted
-    """
-    server_response = network.send(my_pick)
-    return server_response == "ok"
-
-
 def start_game(network, screen, team_selector, role_selector, start_game_menu):
     """
-    Responds to main menu Play button
-    Validates team & role pick and starts the player client
+    Starts the game.
+    Sends team & role pick to server,
+    Initializes the player client if role approved
     """
-    my_pick = (my_team, my_role) = team_selector.get_value()[1], role_selector.get_value()[1]
+    role_pick = (my_team, my_role) = team_selector.get_value()[1], role_selector.get_value()[1]
 
-    if pick_team(network, my_pick):  # team & role pick was accepted
+    # send role pick to the server
+    server_response = network.send(role_pick)
+
+    if server_response == "role accepted":   # role was accepted, play as the role
         play_role(network, screen, my_role)
 
-    else:
-        # role is taken, notify user
+    elif server_response == "role taken":    # role is taken, notify user
         if not start_game_menu.get_widget("role taken"):
             start_game_menu.add_label("role taken", "role taken")
 
