@@ -1,4 +1,4 @@
-from game import Game
+from game_file import Game
 from globals import *
 import math
 
