@@ -8,6 +8,20 @@ from network import Network
 from globals import *
 
 
+# globals
+SCREEN_HEIGHT = 720
+SCREEN_WIDTH = 1280
+
+MAX_ALPHA = 255
+LEFT_MOUSE_BUTTON = 1
+
+POWER_ROWS = 2
+POWER_COLS = 3
+
+TOOL_ROWS = 3
+TOOL_COLS = 12
+
+
 class DrawingCell:
     def __init__(self, pos, color=(128, 30, 30)):
         self.size = 12
@@ -43,9 +57,9 @@ class Button:
 
     def draw(self, win):
         if self.clicked:
-            self.subsurface.set_alpha(max_alpha)
+            self.subsurface.set_alpha(MAX_ALPHA)
         else:
-            self.subsurface.set_alpha(max_alpha // 2)
+            self.subsurface.set_alpha(MAX_ALPHA // 2)
 
         win.blit(self.subsurface, self.pos)
         self.subsurface.blit(self.img, (15, self.height / 3))
@@ -92,10 +106,10 @@ class PlayerClient:
                 if event.type == pygame.QUIT:
                     self.game_states = "exit"
 
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == left_mouse_btn:
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == LEFT_MOUSE_BUTTON:
                     self.mouse_pressed(event)
 
-                elif event.type == pygame.MOUSEBUTTONUP and event.button == left_mouse_btn:
+                elif event.type == pygame.MOUSEBUTTONUP and event.button == LEFT_MOUSE_BUTTON:
                     self.mouse_released()
 
                 elif event.type == pygame.MOUSEMOTION:
@@ -184,7 +198,7 @@ class PlayerClient:
         """
         Draws a black screen for stop mode
         """
-        self.screen.fill(black)
+        self.screen.fill(Color.BLACK)
         self.display_message("stop")
 
     def send_action_to_server(self, action_name, action_value):
@@ -246,10 +260,10 @@ class PlayerClient:
         """
         Renders a text object
         """
-        text_surface = font.render(text, True, white)
+        text_surface = font.render(text, True, Color.WHITE)
         return text_surface, text_surface.get_rect()
 
-    def display_message(self, text, x=screen_width / 2, y=screen_height / 2, size=100,
+    def display_message(self, text, x=SCREEN_WIDTH / 2, y=SCREEN_HEIGHT / 2, size=100,
                         font='comicsansms'):
         """
         Displays message in the given location at the screen
@@ -264,7 +278,7 @@ class PlayerClient:
         Loads the background image
         """
         background_image = pygame.image.load(self.image_filename)
-        background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
+        background_image = pygame.transform.scale(background_image, (SCREEN_WIDTH, SCREEN_HEIGHT))
         background_image_rect = background_image.get_rect()
         background_image_rect.left, background_image_rect.top = [0, 0] # top left pos
         return background_image, background_image_rect
@@ -278,10 +292,10 @@ class CaptainClient(PlayerClient):
 
     def __init__(self, screen, network):
         super().__init__(screen, network)
-        self.stop_button = pygame.Rect(4 * screen_width // 5,
-                                       screen_height // 2,
-                                       screen_height // 5,
-                                       screen_height // 5)
+        self.stop_button = pygame.Rect(4 * SCREEN_WIDTH // 5,
+                                       SCREEN_HEIGHT // 2,
+                                       SCREEN_HEIGHT // 5,
+                                       SCREEN_HEIGHT // 5)
 
     def play_turn(self):
         target_clicked = self.detect_target_clicked()
@@ -295,7 +309,7 @@ class CaptainClient(PlayerClient):
 
     def draw(self):
         # draw stop button
-        pygame.draw.rect(self.screen, black, self.stop_button)
+        pygame.draw.rect(self.screen, Color.BLACK, self.stop_button)
         self.display_message("stop",
                              self.stop_button.x + self.stop_button.width // 2,
                              self.stop_button.y + self.stop_button.height // 2,
@@ -310,14 +324,14 @@ class CaptainClient(PlayerClient):
         Otherwise return None
         """
         for clicked_x, clicked_y in self.clicked_locations:
-            for i in range(board_height):
-                for j in range(board_width):
+            for i in range(BOARD_HEIGHT):
+                for j in range(BOARD_WIDTH):
                     # params of the (i, j) circle in the board
                     (circle_x, circle_y), circle_radius = self.get_board_circle_params(i, j)
 
                     # if clicked location is in the (i, j) circle and the circle is yellow
                     if math.hypot(circle_x - clicked_x, circle_y - clicked_y) < circle_radius:
-                        if self.state.board_str[board_height * i + j] == "y":
+                        if self.state.board_str[BOARD_HEIGHT * i + j] == "y":
                             return (i, j)
         return None
 
@@ -325,20 +339,20 @@ class CaptainClient(PlayerClient):
         """
         Draws the captain board according to the current state
         """
-        for i in range(board_height):
-            for j in range(board_width):
-                char = self.state.board_str[i * board_height + j]
+        for i in range(BOARD_HEIGHT):
+            for j in range(BOARD_WIDTH):
+                char = self.state.board_str[i * BOARD_HEIGHT + j]
                 circle_params = self.get_board_circle_params(i, j)
 
                 if char:
                     if char == "r":
-                        color = red
+                        color = Color.RED
                         pygame.draw.circle(self.screen, color, *circle_params)
                     elif char == "b":
-                        color = black
+                        color = Color.BLACK
                         pygame.draw.circle(self.screen, color, *circle_params)
                     elif char == "y":
-                        color = yellow
+                        color = Color.YELLOW
                         pygame.draw.circle(self.screen, color, *circle_params)
 
     @staticmethod
@@ -346,9 +360,9 @@ class CaptainClient(PlayerClient):
         """
         Gets grid coordinates i, j and returns circle params of the board circle
         """
-        x = int(0.0984375 * screen_width + 0.040390625 * screen_width * j)
-        y = int(0.13625 * screen_height + 0.056125 * screen_height * i)
-        radius = int(0.00576923077 * (screen_height + screen_width))
+        x = int(0.0984375 * SCREEN_WIDTH + 0.040390625 * SCREEN_WIDTH * j)
+        y = int(0.13625 * SCREEN_HEIGHT + 0.056125 * SCREEN_HEIGHT * i)
+        radius = int(0.00576923077 * (SCREEN_HEIGHT + SCREEN_WIDTH))
         return (x, y), radius
 
 
@@ -361,8 +375,8 @@ class FirstMateClient(PlayerClient):
     def __init__(self, screen, network):
         super().__init__(screen, network)
         self.powers_rects = [pygame.Rect([143 + 394 * j, 173 + 265 * i, 232, 165])
-                             for i in range(power_rows)
-                             for j in range(power_cols)]
+                             for i in range(POWER_ROWS)
+                             for j in range(POWER_COLS)]
 
     def play_turn(self):
         power_clicked = PlayerClient.detect_rect_clicked(
@@ -386,11 +400,11 @@ class FirstMateClient(PlayerClient):
         arch_border_width = 20
         for power_charge, rect in zip(self.state.powers_charges, self.powers_rects):
             for k in range(power_charge[0]):
-                pygame.draw.arc(self.screen, red, rect, start_angle - ((k + 1) * one_arch_angle),
+                pygame.draw.arc(self.screen, Color.RED, rect, start_angle - ((k + 1) * one_arch_angle),
                                 start_angle - (k * one_arch_angle), arch_border_width)
 
             if self.state.can_act and power_charge[0] < power_charge[1]:
-                pygame.draw.arc(self.screen, yellow, rect,
+                pygame.draw.arc(self.screen, Color.YELLOW, rect,
                                 start_angle - ((power_charge[0] + 1) * one_arch_angle),
                                 start_angle - (power_charge[0] * one_arch_angle), arch_border_width)
 
@@ -404,8 +418,8 @@ class EngineerClient(PlayerClient):
     def __init__(self, screen, network):
         super().__init__(screen, network)
         self.tools_rects = [[pygame.Rect([164 + 71 * i + 39 * (i // 3), 418 + j * 76, 60, 50])
-                             for i in range(tools_cols)]
-                            for j in range(tools_rows)]
+                             for i in range(TOOL_COLS)]
+                            for j in range(TOOL_ROWS)]
 
     def play_turn(self):
         possible_tools_to_break_rects = [self.tools_rects[tool[0][0]][tool[0][1]]
@@ -423,9 +437,9 @@ class EngineerClient(PlayerClient):
     def draw(self):
         for tool in self.state.tools_state:
             if tool[1] == "r":
-                self.draw_engineer_tool(red, tool[0])
+                self.draw_engineer_tool(Color.RED, tool[0])
             elif tool[1] == "y":
-                self.draw_engineer_tool(yellow, tool[0])
+                self.draw_engineer_tool(Color.YELLOW, tool[0])
 
     def draw_engineer_tool(self, color, cords):
         """
@@ -444,11 +458,11 @@ class RadioOperatorClient(PlayerClient):
     def __init__(self, screen, network):
         super().__init__(screen, network)
         button_size = 30
-        b_pen_tool = Button(screen_width / 5 * 4, 60,
+        b_pen_tool = Button(SCREEN_WIDTH / 5 * 4, 60,
                             button_size, button_size, "img/brush.png", True)
-        b_eraser_tool = Button(screen_width / 5 * 4 + button_size + 20, 60,
+        b_eraser_tool = Button(SCREEN_WIDTH / 5 * 4 + button_size + 20, 60,
                                button_size, button_size, "img/eraser.png", False)
-        b_select_tool = Button(screen_width / 5 * 4, 60 + button_size + 20,
+        b_select_tool = Button(SCREEN_WIDTH / 5 * 4, 60 + button_size + 20,
                                button_size, button_size, "img/select2.png", False)
         self.buttons = [b_pen_tool, b_eraser_tool, b_select_tool]
 
@@ -542,15 +556,15 @@ class RadioOperatorClient(PlayerClient):
                     self.drawing_cells_list = []
 
     def play_turn(self):
-        if self.selected_tool != SELECT:
+        if self.selected_tool != DrawingTool.SELECT:
             self.select_tool_rect = None
             self.select_tool_cells_selected = None
 
         if not self.state.is_game_stopped:
             for mouse_pos in self.clicked_locations:
-                if self.selected_tool == BRUSH:
+                if self.selected_tool == DrawingTool.BRUSH:
                     self.drawing_cells_list.append(DrawingCell(mouse_pos))
-                elif self.selected_tool == ERASER:
+                elif self.selected_tool == DrawingTool.ERASER:
                     self.drawing_cells_list = [drawing_cell for drawing_cell in \
                                                    self.drawing_cells_list
                                                if not drawing_cell.rect.collidepoint(mouse_pos)]
@@ -559,9 +573,9 @@ class RadioOperatorClient(PlayerClient):
         for cell in self.drawing_cells_list:
             cell.draw(self.screen)
 
-        self.display_message("Tools", screen_width / 5 * 4, 30, 25)
-        self.display_message(self.state.last_enemy_move_direction, screen_width / 5 * 4, 400, 40)
-        pygame.draw.rect(self.screen, (180, 180, 180), (screen_width / 5 * 4 - 30, 50, 170, 100))
+        self.display_message("Tools", SCREEN_WIDTH / 5 * 4, 30, 25)
+        self.display_message(self.state.last_enemy_move_direction, SCREEN_WIDTH / 5 * 4, 400, 40)
+        pygame.draw.rect(self.screen, (180, 180, 180), (SCREEN_WIDTH / 5 * 4 - 30, 50, 170, 100))
         for but in self.buttons:
             but.draw(self.screen)
 
@@ -583,13 +597,13 @@ def play_role(network, screen, my_role):
     Starts the player client of the specified role
     """
     try:
-        if my_role == CAPTAIN:
+        if my_role == PlayerRole.CAPTAIN:
             client = CaptainClient(screen, network)
-        elif my_role == FIRST_MATE:
+        elif my_role == PlayerRole.FIRST_MATE:
             client = FirstMateClient(screen, network)
-        elif my_role == ENGINEER:
+        elif my_role == PlayerRole.ENGINEER:
             client = EngineerClient(screen, network)
-        elif my_role == RADIO_OPERATOR:
+        elif my_role == PlayerRole.RADIO_OPERATOR:
             client = RadioOperatorClient(screen, network)
 
         client.play()
@@ -625,7 +639,7 @@ def main():
     Operates the main menu and initializes the game logic
     """
     pygame.init()
-    screen = pygame.display.set_mode((screen_width, screen_height))
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     menu_width, menu_height = 300, 400
     try:
         network = Network()
@@ -643,14 +657,14 @@ def main():
                                        theme=pygame_menu.themes.THEME_BLUE)
 
     team_selector = start_game_menu.add_selector('Team :',
-                                                 [('blue', BLUE_TEAM),
-                                                  ('yellow', YELLOW_TEAM)])
+                                                 [('blue', Team.BLUE),
+                                                  ('yellow', Team.YELLOW)])
 
     role_selector = start_game_menu.add_selector('Role :',
-                                                 [('captain', CAPTAIN),
-                                                  ('first mate', FIRST_MATE),
-                                                  ('engineer', ENGINEER),
-                                                  ('radio operator', RADIO_OPERATOR)])
+                                                 [('captain', PlayerRole.CAPTAIN),
+                                                  ('first mate', PlayerRole.FIRST_MATE),
+                                                  ('engineer', PlayerRole.ENGINEER),
+                                                  ('radio operator', PlayerRole.RADIO_OPERATOR)])
 
     start_game_menu.add_button('Play',
                                start_game,

@@ -31,8 +31,8 @@ class CaptainPlayer(Player):
 
     def get_board_string(self, game):
         board_str = ""
-        for i in range(board_width):
-            for j in range(board_height):
+        for i in range(BOARD_WIDTH):
+            for j in range(BOARD_HEIGHT):
                 if (i, j) == self.submarine.loc:
                     board_str += "b" # submarine location is marked b for black
                 elif (i, j) in self.submarine.path:

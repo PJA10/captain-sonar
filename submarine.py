@@ -1,6 +1,6 @@
-from globals import *
-
 class Submarine:
+    direction_dict = {"N": (-1, 0), "E": (0, 1), "S": (1, 0), "W": (0, -1)}
+
     def __init__(self, team):
         self.mine_charge, self.torpedo_charge, self.sonar_charge, self.drone_charge, self.silance_charnge = \
             0, 0, 0, 0, 0
@@ -50,7 +50,7 @@ class Submarine:
     def move(self, target):
         move_d_row = target[0] - self.loc[0]
         move_d_col = target[1] - self.loc[1]
-        for direction_name, direction_cords in direction_dict.items():
+        for direction_name, direction_cords in self.direction_dict.items():
             if direction_cords == (move_d_row, move_d_col):
                 self.last_move_direction = direction_name
                 break
@@ -142,8 +142,6 @@ class Tool:
         self.is_broken = True
         if self.chain:
             self.chain.one_fixed()
-
-
 
 class Chain:
     def __init__(self, color):
