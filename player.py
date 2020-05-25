@@ -63,8 +63,8 @@ class FirstMatePlayer(Player):
 
     def get_powers_charges(self):
         powers_charges = []
-        for powerAction in self.submarine.powerActionsList:
-            powers_charges.append((powerAction.charge, powerAction.max_charge))
+        for power_action in self.submarine.power_actions_list:
+            powers_charges.append((power_action.charge, power_action.max_charge))
         return powers_charges
 
     def clicked(self, game, power_clicked_index):
@@ -74,8 +74,8 @@ class FirstMatePlayer(Player):
         return FirstMateState.from_player(self, game)
 
     def load_power(self, power_clicked_index):
-        if self.submarine.powerActionsList[power_clicked_index].can_load():
-            self.submarine.powerActionsList[power_clicked_index].load()
+        if self.submarine.power_actions_list[power_clicked_index].can_load():
+            self.submarine.power_actions_list[power_clicked_index].load()
             self.submarine.first_mate_check()
 
 
