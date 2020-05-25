@@ -1,10 +1,13 @@
+import os
+import sys
 import time
+import socket
+from _thread import start_new_thread
 
+# developer note: player must be imported from before game_file to avoid circular importing
 from player import CaptainState, FirstMateState
-from gameFile import *
-from _thread import *
-import sys, os
-from network import *
+from game_file import Game
+from network import send_msg, recv
 
 server = "127.0.0.1"
 port = 7777
@@ -46,9 +49,9 @@ def threaded_client(conn, this_player_id):
                 send_msg(conn, "role taken")
                 break
 
-        # if role is not taken, sends back "ok"
+        # if role is accepted
         else:
-            send_msg(conn, "ok")
+            send_msg(conn, "role accepted")
             this_player = game.add_new_player(this_player_team, this_player_role)
             break
 
@@ -59,36 +62,18 @@ def threaded_client(conn, this_player_id):
             data = recv(conn, blocking=False)
 
             if data:
-                # captain stuff
-                if data == "captain get":
+
+                if data == "get": # client init
                     current_player_state = this_player.get_state(game)
-                elif data == "captain clicked loc":
+
+                elif "clicked" in data: # user acted and the client will send what he clicked on
                     target_clicked = recv(conn)
                     this_player.clicked(game, target_clicked)
                     current_player_state = this_player.get_state(game)
+
+                # captain stuff
                 elif data == "captain stop":
                     game.is_stopped = True
-                    current_player_state = this_player.get_state(game)
-
-                # first mate stuff
-                elif data == "first mate get":
-                    current_player_state = this_player.get_state(game)
-                elif data == "first mate clicked power":
-                    power_clicked_index = recv(conn)
-                    # power clicked is sent to the server as the index of the power in powerActionsList witch is the same as powers_rects
-                    this_player.load_power(power_clicked_index)
-                    current_player_state = this_player.get_state(game)
-
-                # engineer stuff
-                elif data == "engineer get":
-                    current_player_state = this_player.get_state(game)
-                elif data == "engineer clicked tool":
-                    tool_to_brake_cords = recv(conn)
-                    this_player.brake_tool(tool_to_brake_cords)
-                    current_player_state = this_player.get_state(game)
-
-                # radio operator stuff
-                elif data == "radio operator get":
                     current_player_state = this_player.get_state(game)
 
                 send_msg(conn, tuple(current_player_state))

@@ -1,6 +1,6 @@
-from globals import *
-
 class Submarine:
+    direction_dict = {"N": (-1, 0), "E": (0, 1), "S": (1, 0), "W": (0, -1)}
+
     def __init__(self, team):
         self.mine_charge, self.torpedo_charge, self.sonar_charge, self.drone_charge, self.silance_charnge = \
             0, 0, 0, 0, 0
@@ -11,12 +11,12 @@ class Submarine:
         self.chains = []
         self.hp = 4
         self.team = team
-        self.mineAction = PowerAction("mine", "weapon", 3)
-        self.torpedoAction = PowerAction("torpedo", "weapon", 3)
-        self.droneAction = PowerAction("drone", "intelligence", 4)
-        self.sonarAction = PowerAction("sonar", "intelligence", 3)
-        self.silenceAction = PowerAction("silence", "special", 6)
-        self.powerActionsList = [self.mineAction, self.droneAction, self.silenceAction, self.torpedoAction, self.sonarAction]
+        self.mine_action = PowerAction("mine", "weapon", 3)
+        self.torpedo_action = PowerAction("torpedo", "weapon", 3)
+        self.drone_action = PowerAction("drone", "intelligence", 4)
+        self.sonar_action = PowerAction("sonar", "intelligence", 3)
+        self.silence_action = PowerAction("silence", "special", 6)
+        self.power_actions_list = [self.mine_action, self.drone_action, self.silence_action, self.torpedo_action, self.sonar_action]
         self.can_move = True
         self.is_first_mate_check = True
         self.is_engineer_check = True
@@ -50,7 +50,7 @@ class Submarine:
     def move(self, target):
         move_d_row = target[0] - self.loc[0]
         move_d_col = target[1] - self.loc[1]
-        for direction_name, direction_cords in direction_dict.items():
+        for direction_name, direction_cords in self.direction_dict.items():
             if direction_cords == (move_d_row, move_d_col):
                 self.last_move_direction = direction_name
                 break
@@ -61,7 +61,20 @@ class Submarine:
         self.path.append(target)
 
         self.can_move = False
+        self.first_mate_uncheck()
+        self.engineer_uncheck()
+
+    def first_mate_uncheck(self):
         self.is_first_mate_check = False
+
+        # if all power action's charges are maxed then the first mate automatically check
+        for power_action in self.power_actions_list:
+            if power_action.charge != power_action.max_charge:
+                break
+        else:
+            self.is_first_mate_check = True
+
+    def engineer_uncheck(self):
         self.is_engineer_check = False
 
     def engineer_check(self):
@@ -129,8 +142,6 @@ class Tool:
         self.is_broken = True
         if self.chain:
             self.chain.one_fixed()
-
-
 
 class Chain:
     def __init__(self, color):
