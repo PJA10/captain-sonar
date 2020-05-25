@@ -1,10 +1,12 @@
+import os
+import sys
 import time
+import socket
+from _thread import start_new_thread
 
-from player import CaptainState, FirstMateState
 from game_file import Game
-from _thread import *
-import sys, os
-from network import *
+from player import CaptainState, FirstMateState
+from network import send_msg, recv
 
 server = "127.0.0.1"
 port = 7777

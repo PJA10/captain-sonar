@@ -5,7 +5,8 @@ import pygame_menu
 
 from player import CaptainState, FirstMateState, EngineerState, RadioOperatorState
 from network import Network
-from globals import *
+from common import Color, PlayerRole, Team, DrawingTool
+from config import BOARD_HEIGHT, BOARD_WIDTH
 
 
 # globals
@@ -485,7 +486,7 @@ class RadioOperatorClient(PlayerClient):
         clicked_pos = event.pos
         self.clicked_locations.add(clicked_pos)  # add curr pos to the set
 
-        if self.selected_tool == SELECT:
+        if self.selected_tool == DrawingTool.SELECT:
             if self.select_tool_rect and self.select_tool_rect.collidepoint(
                     clicked_pos):  # if starting to drag select box
                 self.select_tool_move_start_pos = clicked_pos
@@ -503,7 +504,7 @@ class RadioOperatorClient(PlayerClient):
 
     def mouse_released(self):
         self.clicking = False
-        if self.selected_tool == SELECT and \
+        if self.selected_tool == DrawingTool.SELECT and \
            self.select_tool_rect and \
            self.select_tool_cells_selected is None:
             self.select_tool_cells_selected = [drawing_cell
@@ -516,7 +517,7 @@ class RadioOperatorClient(PlayerClient):
             mouse_pos = pygame.mouse.get_pos()
             self.clicked_locations = self.clicked_locations.union({mouse_pos})
 
-            if self.selected_tool == SELECT:
+            if self.selected_tool == DrawingTool.SELECT:
                 if self.select_tool_cells_selected is not None:  # dragging the select box
                     self.drag_existing_select_box()
                 elif self.select_tool_start_pos:  # dragging to create the select box

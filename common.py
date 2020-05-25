@@ -1,8 +1,5 @@
 from enum import IntEnum
 
-BOARD_WIDTH = 15
-BOARD_HEIGHT = 15
-
 class Color:
     WHITE = (255,255,255)
     BLACK = (0,0,0)
