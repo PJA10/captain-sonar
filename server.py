@@ -4,8 +4,9 @@ import time
 import socket
 from _thread import start_new_thread
 
-from game_file import Game
+# developer note: player must be imported from before game_file
 from player import CaptainState, FirstMateState
+from game_file import Game
 from network import send_msg, recv
 
 server = "127.0.0.1"
