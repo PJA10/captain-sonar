@@ -24,6 +24,9 @@ TOOL_COLS = 12
 
 
 class DrawingCell:
+    """
+    This class implements a drawing cell for the radio operator client
+    """
     def __init__(self, pos, color=(128, 30, 30)):
         self.size = 12
         self.color = color
@@ -32,19 +35,21 @@ class DrawingCell:
         self.pos = (pos[0] - self.size // 2, pos[1] - self.size // 2)
         self.rect = pygame.Rect(self.pos[0], self.pos[1], self.size, self.size)
 
-    def change_color(self, color):
-        self.color = color
-        self.subsurface.fill(self.color)
-
     def draw(self, win):
         win.blit(self.subsurface, self.pos)
 
     def move(self, dx, dy):
+        """
+        Add to the cell pos the given dx, dy
+        """
         self.pos = (self.pos[0] + dx, self.pos[1] + dy)
         self.rect = pygame.Rect(self.pos[0], self.pos[1], self.size, self.size)
 
 
 class Button:
+    """
+    This class implements a button together with it's graphic attributes
+    """
     def __init__(self, posX, posY, width, height, img_name, clicked, color=(80, 80, 80)):
         self.pos = (posX, posY)
         self.width, self.height = width, height
@@ -524,21 +529,31 @@ class RadioOperatorClient(PlayerClient):
                     self.drag_to_create_select_box()
 
     def drag_existing_select_box(self):
+        """
+        Drag the select box on the screen.
+        Additionally every drawing cell that was in the select box when it was created will be dragged as will
+        """
         select_tool_move_end_pos = pygame.mouse.get_pos()
         dx = select_tool_move_end_pos[0] - self.select_tool_move_start_pos[0]
         dy = select_tool_move_end_pos[1] - self.select_tool_move_start_pos[1]
-        for cell in self.select_tool_cells_selected:
+        for cell in self.select_tool_cells_selected: # move all the selected drawing cells
             cell.move(dx, dy)
-        self.select_tool_rect = self.select_tool_rect.move(dx, dy)
+        self.select_tool_rect = self.select_tool_rect.move(dx, dy) # move the select box itself
         self.select_tool_move_start_pos = select_tool_move_end_pos
 
     def drag_to_create_select_box(self):
+        """
+        Create/resize the select box to be from the mouse position when it was first clicked to the the current mouse position
+        """
         select_tool_end_pos = pygame.mouse.get_pos()
-        left_top = (min(select_tool_end_pos[0], self.select_tool_start_pos[0]),
+        # the top_left_box_position have the minimum x and y between the start and end positions of the current dragging
+        top_left_box_position = (min(select_tool_end_pos[0], self.select_tool_start_pos[0]),
                     min(select_tool_end_pos[1], self.select_tool_start_pos[1]))
+        
+        # the width and height of the box are the difference between the start and end positions of the current dragging
         width = abs(select_tool_end_pos[0] - self.select_tool_start_pos[0])
         height = abs(select_tool_end_pos[1] - self.select_tool_start_pos[1])
-        self.select_tool_rect = pygame.Rect(left_top[0], left_top[1], width, height)
+        self.select_tool_rect = pygame.Rect(top_left_box_position[0], top_left_box_position[1], width, height)
 
     def key_released(self, event):
         if event.key == pygame.K_LCTRL:
