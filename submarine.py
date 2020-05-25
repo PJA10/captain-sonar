@@ -11,12 +11,12 @@ class Submarine:
         self.chains = []
         self.hp = 4
         self.team = team
-        self.mineAction = PowerAction("mine", "weapon", 3)
-        self.torpedoAction = PowerAction("torpedo", "weapon", 3)
-        self.droneAction = PowerAction("drone", "intelligence", 4)
-        self.sonarAction = PowerAction("sonar", "intelligence", 3)
-        self.silenceAction = PowerAction("silence", "special", 6)
-        self.powerActionsList = [self.mineAction, self.droneAction, self.silenceAction, self.torpedoAction, self.sonarAction]
+        self.mine_action = PowerAction("mine", "weapon", 3)
+        self.torpedo_action = PowerAction("torpedo", "weapon", 3)
+        self.drone_action = PowerAction("drone", "intelligence", 4)
+        self.sonar_action = PowerAction("sonar", "intelligence", 3)
+        self.silence_action = PowerAction("silence", "special", 6)
+        self.power_actions_list = [self.mine_action, self.drone_action, self.silence_action, self.torpedo_action, self.sonar_action]
         self.can_move = True
         self.is_first_mate_check = True
         self.is_engineer_check = True
@@ -61,7 +61,20 @@ class Submarine:
         self.path.append(target)
 
         self.can_move = False
+        self.first_mate_uncheck()
+        self.engineer_uncheck()
+
+    def first_mate_uncheck(self):
         self.is_first_mate_check = False
+
+        # if all power action's charges are maxed then the first mate automatically check
+        for power_action in self.power_actions_list:
+            if power_action.charge != power_action.max_charge:
+                break
+        else:
+            self.is_first_mate_check = True
+
+    def engineer_uncheck(self):
         self.is_engineer_check = False
 
     def engineer_check(self):
