@@ -4,7 +4,7 @@ import time
 import socket
 from _thread import start_new_thread
 
-# developer note: player must be imported from before game_file
+# developer note: player must be imported from before game_file to avoid circular importing
 from player import CaptainState, FirstMateState
 from game_file import Game
 from network import send_msg, recv
