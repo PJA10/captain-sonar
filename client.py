@@ -655,23 +655,30 @@ def main():
     Operates the main menu and initializes the game logic
     """
     pygame.init()
+    logo_file = 'img/captain_sonar_logo.png'
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    menu_width, menu_height = 300, 400
+
+    icon_image = pygame.transform.scale(pygame.image.load(logo_file), (32, 32))
+    pygame.display.set_icon(icon_image)
+
+    my_theme = pygame_menu.themes.THEME_SOLARIZED.copy()
+    my_theme.widget_font = pygame_menu.font.FONT_OPEN_SANS_BOLD
+
     try:
         network = Network()
     except:
-        try_again_menu = pygame_menu.Menu(menu_width,
-                                          menu_height,
+        try_again_menu = pygame_menu.Menu(SCREEN_HEIGHT,
+                                          SCREEN_WIDTH,
                                           'Cant connect to server',
-                                          theme=pygame_menu.themes.THEME_BLUE)
+                                          theme=my_theme)
         try_again_menu.add_button('Try again', main)
         try_again_menu.mainloop(screen)
 
-    start_game_menu = pygame_menu.Menu(menu_width,
-                                       menu_height,
+    start_game_menu = pygame_menu.Menu(SCREEN_HEIGHT,
+                                       SCREEN_WIDTH,
                                        'Welcome',
-                                       theme=pygame_menu.themes.THEME_BLUE)
-
+                                       theme=my_theme)
+    start_game_menu.add_image(logo_file, scale=(0.8, 0.8), margin=(0,50))
     team_selector = start_game_menu.add_selector('Team :',
                                                  [('blue', Team.BLUE),
                                                   ('yellow', Team.YELLOW)])
