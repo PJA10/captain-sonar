@@ -1,5 +1,15 @@
 from enum import IntEnum
 
+
+class ActionType(IntEnum):
+    SURFACE = 0
+    TORPEDO = 1
+    PLANT_MINE = 2
+    ACTIVATE_MINE = 3
+    DRONE = 4
+    SONAR = 5
+    SILENCE = 6
+
 class Color:
     WHITE = (255,255,255)
     BLACK = (0,0,0)
@@ -20,3 +30,4 @@ class DrawingTool(IntEnum):
     BRUSH = 0
     ERASER = 1
     SELECT = 2
+

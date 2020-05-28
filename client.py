@@ -5,7 +5,7 @@ import pygame_menu
 
 from player import CaptainState, FirstMateState, EngineerState, RadioOperatorState
 from network import Network
-from common import Color, PlayerRole, Team, DrawingTool
+from common import Color, PlayerRole, Team, DrawingTool, ActionType
 from config import BOARD_HEIGHT, BOARD_WIDTH
 
 
@@ -21,6 +21,11 @@ POWER_COLS = 3
 
 TOOL_ROWS = 3
 TOOL_COLS = 12
+
+MY_THEME = pygame_menu.themes.THEME_SOLARIZED.copy()
+MY_THEME.widget_font = pygame_menu.font.FONT_OPEN_SANS_BOLD
+
+
 
 
 class DrawingCell:
@@ -296,12 +301,33 @@ class CaptainClient(PlayerClient):
     """
     image_filename = 'img/AlphaMap2.jpeg'
 
+
     def __init__(self, screen, network):
         super().__init__(screen, network)
         self.stop_button = pygame.Rect(4 * SCREEN_WIDTH // 5,
                                        SCREEN_HEIGHT // 2,
                                        SCREEN_HEIGHT // 5,
                                        SCREEN_HEIGHT // 5)
+        self.resume_button = pygame.Rect(SCREEN_WIDTH // 2,
+                                         4 * SCREEN_HEIGHT // 5,
+                                         SCREEN_HEIGHT // 6,
+                                         SCREEN_HEIGHT // 6)
+        self.show_stop_menu_screen = False
+        self.stop_screen_menu = pygame_menu.Menu(SCREEN_HEIGHT,
+                                            SCREEN_WIDTH,
+                                            'Stop',
+                                            theme=MY_THEME)
+        action_type_selector = self.stop_screen_menu.add_selector('Activate :',
+                                                             [('surface', ActionType.SURFACE),
+                                                              ('torpedo', ActionType.TORPEDO),
+                                                              ('plant mine', ActionType.PLANT_MINE),
+                                                              ('activate mine', ActionType.ACTIVATE_MINE),
+                                                              ('drone', ActionType.DRONE),
+                                                              ('sonar', ActionType.SONAR),
+                                                              ('silence', ActionType.SILENCE)])
+        self.stop_screen_menu.add_button('submit', self.submit_action_type_clicked, action_type_selector)
+        self.stop_screen_menu.add_button('resume', self.resume_game_clicked)
+
 
     def play_turn(self):
         target_clicked = self.detect_target_clicked()
@@ -309,9 +335,17 @@ class CaptainClient(PlayerClient):
             self.update_state(self.send_action_to_server("captain clicked loc", target_clicked))
 
     def play_outside_of_turn(self):
+        if self.state.is_game_stopped:
+            self.show_stop_menu_screen = False
+
         if not self.state.is_game_stopped \
            and PlayerClient.is_rect_clicked(self.stop_button, self.clicked_locations):
             self.update_state(self.network.send("captain stop"))
+            self.show_stop_menu_screen = True
+        elif self.state.is_game_stopped and PlayerClient.is_rect_clicked(self.resume_button, self.clicked_locations):
+            self.resume_game_clicked()
+
+
 
     def draw(self):
         # draw stop button
@@ -322,6 +356,35 @@ class CaptainClient(PlayerClient):
                              self.stop_button.width // 3)
 
         self.draw_captain_board()
+
+    def draw_stop_screen(self):
+        if self.show_stop_menu_screen:
+            self.stop_screen_menu.enable()
+            self.stop_screen_menu.mainloop(self.screen, bgfun=self.update_stop_screen)
+
+        else:
+            self.screen.fill(Color.BLACK)
+            self.display_message(self.state.msg, size=50)
+            if self.state.can_resume:
+                pygame.draw.rect(self.screen, Color.BLACK, self.resume_button)
+                self.display_message("resume",
+                                     self.resume_button.x + self.resume_button.width // 2,
+                                     self.resume_button.y + self.resume_button.height // 2,
+                                     self.resume_button.width // 3)
+
+    def update_stop_screen(self):
+        if not self.state.is_game_stopped:
+            self.stop_screen_menu.disable()
+
+    def submit_action_type_clicked(self, action_type_selector):
+        action_type_selected = action_type_selector.get_value()[1]
+        if action_type_selected == ActionType.SURFACE:
+            self.update_state(self.network.send("captain surface"))
+            self.stop_screen_menu.disable()
+
+    def resume_game_clicked(self):
+        self.update_state(self.network.send("captain resume"))
+
 
     def detect_target_clicked(self):
         """
@@ -624,10 +687,12 @@ def play_role(network, screen, my_role):
 
         client.play()
 
+    except Exception as e:
+        raise e
+
     finally:
         network.close()
         pygame.quit()
-        sys.exit()
 
 
 def start_game(network, screen, team_selector, role_selector, start_game_menu):
@@ -661,23 +726,20 @@ def main():
     icon_image = pygame.transform.scale(pygame.image.load(logo_file), (32, 32))
     pygame.display.set_icon(icon_image)
 
-    my_theme = pygame_menu.themes.THEME_SOLARIZED.copy()
-    my_theme.widget_font = pygame_menu.font.FONT_OPEN_SANS_BOLD
-
     try:
         network = Network()
     except:
         try_again_menu = pygame_menu.Menu(SCREEN_HEIGHT,
                                           SCREEN_WIDTH,
                                           'Cant connect to server',
-                                          theme=my_theme)
+                                          theme=MY_THEME)
         try_again_menu.add_button('Try again', main)
         try_again_menu.mainloop(screen)
 
     start_game_menu = pygame_menu.Menu(SCREEN_HEIGHT,
                                        SCREEN_WIDTH,
                                        'Welcome',
-                                       theme=my_theme)
+                                       theme=MY_THEME)
     start_game_menu.add_image(logo_file, scale=(0.8, 0.8), margin=(0,50))
     team_selector = start_game_menu.add_selector('Team :',
                                                  [('blue', Team.BLUE),

@@ -46,4 +46,8 @@ class Cell:
         self.col = col
         self.is_island = is_island
         self.mines = []
-        self.section = (1+ self.col % 5) + 3 * (self.row % 5)
+        self.section = self.get_cords_section(self.row, self.col)
+
+    @staticmethod
+    def get_cords_section(row, col):
+        return (1+ col % 5) + 3 * (row % 5)

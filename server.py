@@ -9,6 +9,8 @@ from player import CaptainState, FirstMateState
 from game_file import Game
 from network import send_msg, recv
 
+SURFACE_DURATION = 10
+
 server = "127.0.0.1"
 port = 7777
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -59,6 +61,10 @@ def threaded_client(conn, this_player_id):
     current_player_state = this_player.get_state(game)
     while this_player:
         try:
+            if this_player.submarine.surfacing:
+                if time.time() > this_player.submarine.surfacing + SURFACE_DURATION:
+                    this_player.submarine.surfacing = False
+
             data = recv(conn, blocking=False)
 
             if data:
@@ -74,6 +80,15 @@ def threaded_client(conn, this_player_id):
                 # captain stuff
                 elif data == "captain stop":
                     game.is_stopped = True
+                    this_player.submarine.get_enemy_submarine(game).status = "waiting for other captain"
+                    current_player_state = this_player.get_state(game)
+
+                elif data == "captain resume":
+                    this_player.resume(game)
+                    current_player_state = this_player.get_state(game)
+
+                elif data == "captain surface":
+                    this_player.surface(game)
                     current_player_state = this_player.get_state(game)
 
                 send_msg(conn, tuple(current_player_state))

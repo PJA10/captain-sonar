@@ -1,7 +1,7 @@
 import math
-
+import time
 import config
-from game_file import Game
+from game_file import Game, Cell
 
 
 class Player:
@@ -54,6 +54,21 @@ class CaptainPlayer(Player):
 
     def get_state(self, game):
         return CaptainState.from_player(self, game)
+
+    def surface(self, game):
+        self.submarine.status = "waiting for other captain"
+        self.submarine.path = [self.submarine.path[-1]]
+        self.submarine.fix_all_tools()
+        self.submarine.get_enemy_submarine(game).status = \
+            f"enemy surface in section {Cell.get_cords_section(*self.submarine.path[-1])}"
+        self.submarine.get_enemy_submarine(game).can_resume = True
+        self.submarine.can_resume = False
+        self.submarine.surfacing = time.time()
+
+    def resume(self, game):
+        game.is_stopped = False
+        if "surface" in self.submarine.status:
+            self.submarine.get_enemy_submarine(game).status = "surfacing"
 
 
 class FirstMatePlayer(Player):
@@ -133,7 +148,7 @@ class State:
 
     @classmethod
     def from_player(cls, player, game):
-        return cls(player.can_act(), game.is_stopped)
+        return cls(player.can_act(), game.is_stopped or bool(player.submarine.surfacing))
 
     def __eq__(self, other):
         return tuple(self) == tuple(other)
@@ -143,14 +158,16 @@ class State:
 
 
 class CaptainState(State):
-    def __init__(self, can_act, is_game_stopped, board_str):
+    def __init__(self, can_act, is_game_stopped, board_str, msg="", can_resume=False):
         super().__init__(can_act, is_game_stopped)
         self.board_str = board_str
+        self.msg = msg
+        self.can_resume = can_resume
 
     @classmethod
     def from_player(cls, player, game):
         state = State.from_player(player, game)
-        return cls(state.can_act, state.is_game_stopped, player.get_board_string(game))
+        return cls(state.can_act, state.is_game_stopped, player.get_board_string(game), player.submarine.status, player.submarine.can_resume)
 
 
 class FirstMateState(State):
