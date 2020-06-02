@@ -46,8 +46,6 @@ class Submarine:
                       Tool("radioactive", (2, 9), "E"),
                       Tool("intelligence", (2, 10), "E"),
                       Tool("radioactive", (2, 11), "E")]
-        self.status = ""
-        self.can_resume = False
         self.surfacing = False
 
     def move(self, target):

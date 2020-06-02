@@ -6,7 +6,7 @@ from _thread import start_new_thread
 
 # developer note: player must be imported from before game_file to avoid circular importing
 from player import CaptainState, FirstMateState
-from game_file import Game
+from game_file import Game, Surface, Power
 from network import send_msg, recv
 
 SURFACE_DURATION = 10
@@ -61,6 +61,7 @@ def threaded_client(conn, this_player_id):
     current_player_state = this_player.get_state(game)
     while this_player:
         try:
+            # TODO: stop the timer while game in stop
             if this_player.submarine.surfacing:
                 if time.time() > this_player.submarine.surfacing + SURFACE_DURATION:
                     this_player.submarine.surfacing = False
@@ -79,16 +80,20 @@ def threaded_client(conn, this_player_id):
 
                 # captain stuff
                 elif data == "captain stop":
-                    game.is_stopped = True
-                    this_player.submarine.get_enemy_submarine(game).status = "waiting for other captain"
+                    if not game.power_in_action:
+                        game.power_in_action = Power(this_player)
+                        game.is_stopped = True
                     current_player_state = this_player.get_state(game)
 
                 elif data == "captain resume":
-                    this_player.resume(game)
+                    if game.power_in_action:
+                        game.power_in_action.resume(game)
+                        game.power_in_action = None
                     current_player_state = this_player.get_state(game)
 
                 elif data == "captain surface":
-                    this_player.surface(game)
+                    if this_player.can_act():
+                        game.power_in_action = Surface(this_player)
                     current_player_state = this_player.get_state(game)
 
                 send_msg(conn, tuple(current_player_state))

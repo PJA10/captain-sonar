@@ -158,16 +158,15 @@ class State:
 
 
 class CaptainState(State):
-    def __init__(self, can_act, is_game_stopped, board_str, msg="", can_resume=False):
+    def __init__(self, can_act, is_game_stopped, board_str, power_in_action=None):
         super().__init__(can_act, is_game_stopped)
         self.board_str = board_str
-        self.msg = msg
-        self.can_resume = can_resume
+        self.power_in_action = power_in_action
 
     @classmethod
     def from_player(cls, player, game):
         state = State.from_player(player, game)
-        return cls(state.can_act, state.is_game_stopped, player.get_board_string(game), player.submarine.status, player.submarine.can_resume)
+        return cls(state.can_act, state.is_game_stopped, player.get_board_string(game), game.power_in_action)
 
 
 class FirstMateState(State):

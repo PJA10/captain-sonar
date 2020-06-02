@@ -88,7 +88,7 @@ class PlayerClient:
     game_states = "play"
     image_filename = None
 
-    def __init__(self, screen, network):
+    def __init__(self, screen, network, role_pick):
         """
         Instansiates a base client player object
         """
@@ -98,6 +98,7 @@ class PlayerClient:
         self.state = None
         self.clicked_locations = set()
         self.background_image = self.load_background_image()
+        self.my_team, self.my_role = role_pick
 
     def play(self):
         """
@@ -302,8 +303,8 @@ class CaptainClient(PlayerClient):
     image_filename = 'img/AlphaMap2.jpeg'
 
 
-    def __init__(self, screen, network):
-        super().__init__(screen, network)
+    def __init__(self, screen, network, role_pick):
+        super().__init__(screen, network, role_pick)
         self.stop_button = pygame.Rect(4 * SCREEN_WIDTH // 5,
                                        SCREEN_HEIGHT // 2,
                                        SCREEN_HEIGHT // 5,
@@ -312,7 +313,7 @@ class CaptainClient(PlayerClient):
                                          4 * SCREEN_HEIGHT // 5,
                                          SCREEN_HEIGHT // 6,
                                          SCREEN_HEIGHT // 6)
-        self.show_stop_menu_screen = False
+
         self.stop_screen_menu = pygame_menu.Menu(SCREEN_HEIGHT,
                                             SCREEN_WIDTH,
                                             'Stop',
@@ -335,13 +336,9 @@ class CaptainClient(PlayerClient):
             self.update_state(self.send_action_to_server("captain clicked loc", target_clicked))
 
     def play_outside_of_turn(self):
-        if self.state.is_game_stopped:
-            self.show_stop_menu_screen = False
-
         if not self.state.is_game_stopped \
            and PlayerClient.is_rect_clicked(self.stop_button, self.clicked_locations):
             self.update_state(self.network.send("captain stop"))
-            self.show_stop_menu_screen = True
         elif self.state.is_game_stopped and PlayerClient.is_rect_clicked(self.resume_button, self.clicked_locations):
             self.resume_game_clicked()
 
@@ -358,29 +355,39 @@ class CaptainClient(PlayerClient):
         self.draw_captain_board()
 
     def draw_stop_screen(self):
-        if self.show_stop_menu_screen:
+        if self.state.power_in_action and self.state.power_in_action.need_to_act_team == self.my_team and \
+                self.state.power_in_action.is_need_to_act_captain_show_stop_menu:
             self.stop_screen_menu.enable()
             self.stop_screen_menu.mainloop(self.screen, bgfun=self.update_stop_screen)
 
         else:
             self.screen.fill(Color.BLACK)
-            self.display_message(self.state.msg, size=50)
-            if self.state.can_resume:
-                pygame.draw.rect(self.screen, Color.BLACK, self.resume_button)
+            msg = "stopped"
+            if self.state.power_in_action:
+                if self.state.power_in_action.activated_captain.team == self.my_team:
+                    msg = self.state.power_in_action.activated_captain_msg
+                else:
+                    msg = self.state.power_in_action.other_captain_msg
+
+            self.display_message(msg, size=50)
+            if self.state.power_in_action and self.state.power_in_action.need_to_act_team == self.my_team and \
+                    self.state.power_in_action.is_need_to_act_captain_can_resume:
+                pygame.draw.rect(self.screen, Color.RED, self.resume_button)
                 self.display_message("resume",
                                      self.resume_button.x + self.resume_button.width // 2,
                                      self.resume_button.y + self.resume_button.height // 2,
-                                     self.resume_button.width // 3)
+                                     self.resume_button.width // 4)
 
     def update_stop_screen(self):
-        if not self.state.is_game_stopped:
+        if not self.state.is_game_stopped or not(self.state.power_in_action and
+                                                 self.state.power_in_action.need_to_act_team == self.my_team and
+                                                 self.state.power_in_action.is_need_to_act_captain_show_stop_menu):
             self.stop_screen_menu.disable()
 
     def submit_action_type_clicked(self, action_type_selector):
         action_type_selected = action_type_selector.get_value()[1]
         if action_type_selected == ActionType.SURFACE:
             self.update_state(self.network.send("captain surface"))
-            self.stop_screen_menu.disable()
 
     def resume_game_clicked(self):
         self.update_state(self.network.send("captain resume"))
@@ -441,8 +448,8 @@ class FirstMateClient(PlayerClient):
     """
     image_filename = 'img/FirstMateCard.jpeg'
 
-    def __init__(self, screen, network):
-        super().__init__(screen, network)
+    def __init__(self, screen, network, role_pick):
+        super().__init__(screen, network, role_pick)
         self.powers_rects = [pygame.Rect([143 + 394 * j, 173 + 265 * i, 232, 165])
                              for i in range(POWER_ROWS)
                              for j in range(POWER_COLS)]
@@ -484,8 +491,8 @@ class EngineerClient(PlayerClient):
     """
     image_filename = 'img/EngineerCard.jpeg'
 
-    def __init__(self, screen, network):
-        super().__init__(screen, network)
+    def __init__(self, screen, network, role_pick):
+        super().__init__(screen, network, role_pick)
         self.tools_rects = [[pygame.Rect([164 + 71 * i + 39 * (i // 3), 418 + j * 76, 60, 50])
                              for i in range(TOOL_COLS)]
                             for j in range(TOOL_ROWS)]
@@ -524,8 +531,8 @@ class RadioOperatorClient(PlayerClient):
     """
     image_filename = 'img/AlphaMap2.jpeg'
 
-    def __init__(self, screen, network):
-        super().__init__(screen, network)
+    def __init__(self, screen, network, role_pick):
+        super().__init__(screen, network, role_pick)
         button_size = 30
         b_pen_tool = Button(SCREEN_WIDTH / 5 * 4, 60,
                             button_size, button_size, "img/brush.png", True)
@@ -671,19 +678,20 @@ STATE_CLASS_MAP = {
 }
 
 
-def play_role(network, screen, my_role):
+def play_role(network, screen, role_pick):
     """
     Starts the player client of the specified role
     """
     try:
+        my_team, my_role = role_pick
         if my_role == PlayerRole.CAPTAIN:
-            client = CaptainClient(screen, network)
+            client = CaptainClient(screen, network, role_pick)
         elif my_role == PlayerRole.FIRST_MATE:
-            client = FirstMateClient(screen, network)
+            client = FirstMateClient(screen, network, role_pick)
         elif my_role == PlayerRole.ENGINEER:
-            client = EngineerClient(screen, network)
+            client = EngineerClient(screen, network, role_pick)
         elif my_role == PlayerRole.RADIO_OPERATOR:
-            client = RadioOperatorClient(screen, network)
+            client = RadioOperatorClient(screen, network, role_pick)
 
         client.play()
 
@@ -707,7 +715,7 @@ def start_game(network, screen, team_selector, role_selector, start_game_menu):
     server_response = network.send(role_pick)
 
     if server_response == "role accepted":   # role was accepted, play as the role
-        play_role(network, screen, my_role)
+        play_role(network, screen, role_pick)
 
     elif server_response == "role taken":    # role is taken, notify user
         if not start_game_menu.get_widget("role taken"):
