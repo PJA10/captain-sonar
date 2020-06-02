@@ -55,21 +55,6 @@ class CaptainPlayer(Player):
     def get_state(self, game):
         return CaptainState.from_player(self, game)
 
-    def surface(self, game):
-        self.submarine.status = "waiting for other captain"
-        self.submarine.path = [self.submarine.path[-1]]
-        self.submarine.fix_all_tools()
-        self.submarine.get_enemy_submarine(game).status = \
-            f"enemy surface in section {Cell.get_cords_section(*self.submarine.path[-1])}"
-        self.submarine.get_enemy_submarine(game).can_resume = True
-        self.submarine.can_resume = False
-        self.submarine.surfacing = time.time()
-
-    def resume(self, game):
-        game.is_stopped = False
-        if "surface" in self.submarine.status:
-            self.submarine.get_enemy_submarine(game).status = "surfacing"
-
 
 class FirstMatePlayer(Player):
     def __init__(self, team, role, submarine):
