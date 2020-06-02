@@ -8,6 +8,7 @@ from _thread import start_new_thread
 from player import CaptainState, FirstMateState
 from game_file import Game, Surface, Power
 from network import send_msg, recv
+from common import ActionType
 
 SURFACE_DURATION = 10
 
@@ -91,9 +92,11 @@ def threaded_client(conn, this_player_id):
                         game.power_in_action = None
                     current_player_state = this_player.get_state(game)
 
-                elif data == "captain surface":
-                    if this_player.can_act():
-                        game.power_in_action = Surface(this_player)
+                elif "captain submitted" in data:
+                    action_type_submitted = int(data.split(' ')[-1])
+                    if action_type_submitted == ActionType.SURFACE:
+                        if this_player.can_act():
+                            game.power_in_action = Surface(this_player)
                     current_player_state = this_player.get_state(game)
 
                 send_msg(conn, tuple(current_player_state))

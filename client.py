@@ -386,8 +386,7 @@ class CaptainClient(PlayerClient):
 
     def submit_action_type_clicked(self, action_type_selector):
         action_type_selected = action_type_selector.get_value()[1]
-        if action_type_selected == ActionType.SURFACE:
-            self.update_state(self.network.send("captain surface"))
+        self.update_state(self.network.send(f"captain submitted {action_type_selected}"))
 
     def resume_game_clicked(self):
         self.update_state(self.network.send("captain resume"))
