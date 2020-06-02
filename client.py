@@ -319,13 +319,7 @@ class CaptainClient(PlayerClient):
                                             'Stop',
                                             theme=MY_THEME)
         action_type_selector = self.stop_screen_menu.add_selector('Activate :',
-                                                             [('surface', ActionType.SURFACE),
-                                                              ('torpedo', ActionType.TORPEDO),
-                                                              ('plant mine', ActionType.PLANT_MINE),
-                                                              ('activate mine', ActionType.ACTIVATE_MINE),
-                                                              ('drone', ActionType.DRONE),
-                                                              ('sonar', ActionType.SONAR),
-                                                              ('silence', ActionType.SILENCE)])
+                                                             ActionType.MAP)
         self.stop_screen_menu.add_button('submit', self.submit_action_type_clicked, action_type_selector)
         self.stop_screen_menu.add_button('resume', self.resume_game_clicked)
 
@@ -356,6 +350,16 @@ class CaptainClient(PlayerClient):
 
     def draw_stop_screen(self):
         if self.state.power_in_action and self.state.power_in_action.need_to_act_team == self.my_team and \
+                self.state.power_in_action.is_need_to_act_captain_show_board:
+            self.draw_background_image()
+            self.draw()
+            power_in_action_string = [action_type[0] for action_type in ActionType.MAP
+                                      if action_type[1] == self.state.power_in_action.action_type][0]
+            self.display_message(power_in_action_string,
+                                 self.stop_button.x + self.stop_button.width // 2,
+                                 self.stop_button.y - self.stop_button.height,
+                                 self.stop_button.width // 3)
+        elif self.state.power_in_action and self.state.power_in_action.need_to_act_team == self.my_team and \
                 self.state.power_in_action.is_need_to_act_captain_show_stop_menu:
             self.stop_screen_menu.enable()
             self.stop_screen_menu.mainloop(self.screen, bgfun=self.update_stop_screen)
@@ -387,6 +391,8 @@ class CaptainClient(PlayerClient):
     def submit_action_type_clicked(self, action_type_selector):
         action_type_selected = action_type_selector.get_value()[1]
         self.update_state(self.network.send(f"captain submitted {action_type_selected}"))
+
+
 
     def resume_game_clicked(self):
         self.update_state(self.network.send("captain resume"))
@@ -429,7 +435,9 @@ class CaptainClient(PlayerClient):
                     elif char == "y":
                         color = Color.YELLOW
                         pygame.draw.circle(self.screen, color, *circle_params)
-
+                    elif char == "g":
+                        color = Color.GREEN
+                        pygame.draw.circle(self.screen, color, *circle_params)
     @staticmethod
     def get_board_circle_params(i, j):
         """
@@ -708,7 +716,7 @@ def start_game(network, screen, team_selector, role_selector, start_game_menu):
     Sends team & role pick to server,
     Initializes the player client if role approved
     """
-    role_pick = (my_team, my_role) = team_selector.get_value()[1], role_selector.get_value()[1]
+    role_pick = team_selector.get_value()[1], role_selector.get_value()[1]
 
     # send role pick to the server
     server_response = network.send(role_pick)

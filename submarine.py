@@ -1,3 +1,5 @@
+import game_file
+
 class Submarine:
     direction_dict = {"N": (-1, 0), "E": (0, 1), "S": (1, 0), "W": (0, -1)}
 
@@ -112,6 +114,27 @@ class Submarine:
 
     def get_enemy_submarine(self, game):
         return [submarine for submarine in game.submarines if submarine is not self][0]
+
+    def can_plant_mine(self, game):
+        if self.mine_action.charge != self.mine_action.max_charge:
+            return False
+        for tool in self.tools:
+            if tool.type == "weapon" and tool.is_broken:
+                return False
+        for direction_cords in self.direction_dict.values():
+            new_loc = self.loc[0] + direction_cords[0], self.loc[1] + direction_cords[1]
+            if game_file.Game.in_map(new_loc) and not game.board[new_loc[0]][new_loc[1]].is_island and \
+                    new_loc not in self.path + self.mines:
+                break
+        else: # if there are no possible mine locations
+            return False
+        return True
+
+    def plant_mine(self, target):
+        self.mines.append(target)
+        self.mine_action.charge = 0
+
+
 
 class PowerAction:
     def __init__(self, name, type, max_charge):

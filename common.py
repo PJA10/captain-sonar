@@ -1,7 +1,7 @@
 from enum import IntEnum
 
 
-class ActionType(IntEnum):
+class ActionType():
     SURFACE = 0
     TORPEDO = 1
     PLANT_MINE = 2
@@ -9,12 +9,20 @@ class ActionType(IntEnum):
     DRONE = 4
     SONAR = 5
     SILENCE = 6
+    MAP = [('surface', SURFACE),
+           ('torpedo', TORPEDO),
+           ('plant mine', PLANT_MINE),
+           ('activate mine', ACTIVATE_MINE),
+           ('drone', DRONE),
+           ('sonar', SONAR),
+           ('silence', SILENCE)]
 
 class Color:
     WHITE = (255,255,255)
     BLACK = (0,0,0)
     RED = (255,0,0)
     YELLOW = (255,255,0)
+    GREEN = (0,255,0)
 
 class PlayerRole(IntEnum):
     CAPTAIN = 0

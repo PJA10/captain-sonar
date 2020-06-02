@@ -2,7 +2,7 @@ import config
 import player
 import submarine
 import time
-from common import PlayerRole, Team
+from common import PlayerRole, Team, ActionType
 
 
 class Game:
@@ -44,13 +44,17 @@ class Game:
     @staticmethod
     def reverse_team(team):
         return Team.BLUE if team == Team.YELLOW else Team.YELLOW
+
+
 class Power:
-    def __init__(self, activated_captain, is_need_to_act_captain_show_stop_menu=True,
+    def __init__(self, activated_captain, action_type=-1, is_need_to_act_captain_show_stop_menu=True,
                  is_need_to_act_captain_can_resume=True):
         self.activated_captain = activated_captain
+        self.action_type = action_type
 
         self.need_to_act_team = activated_captain.team
         self.is_need_to_act_captain_show_stop_menu = is_need_to_act_captain_show_stop_menu
+        self.is_need_to_act_captain_show_board = False
         self.is_need_to_act_captain_can_resume = is_need_to_act_captain_can_resume
         self.activated_captain_msg = ""
         self.other_captain_msg = "waiting for other captain"
@@ -58,12 +62,13 @@ class Power:
     @staticmethod
     def resume(game):
         game.is_stopped = False
+        game.power_in_action = None
 
 
 class Surface(Power):
     def __init__(self, activated_captain):
-        super().__init__(activated_captain)
-        self.surface_section = Cell.get_cords_section(*activated_captain.submarine.path[-1])
+        super().__init__(activated_captain, ActionType.SURFACE)
+        surface_section = Cell.get_cords_section(*activated_captain.submarine.path[-1])
 
         self.activated_captain.submarine.path = [self.activated_captain.submarine.path[-1]]
         self.activated_captain.submarine.fix_all_tools()
@@ -71,9 +76,24 @@ class Surface(Power):
 
         self.need_to_act_team = Game.reverse_team(self.need_to_act_team)
         self.is_need_to_act_captain_show_stop_menu = False
+        self.is_need_to_act_captain_show_board = False
         self.is_need_to_act_captain_can_resume = True
         self.activated_captain_msg = "waiting for other captain"
-        self.other_captain_msg = f"enemy surface in section {self.surface_section}"
+        self.other_captain_msg = f"enemy surface in section {surface_section}"
+
+class PlantMine(Power):
+    def __init__(self, activated_captain):
+        super().__init__(activated_captain, ActionType.PLANT_MINE)
+        self.is_need_to_act_captain_show_stop_menu = False
+        self.is_need_to_act_captain_can_resume = False
+        self.is_need_to_act_captain_show_board = True
+        self.other_captain_msg = "enemy captain placing a mine"
+
+    def board_target_clicked(self, game, target):
+        self.activated_captain.submarine.plant_mine(target)
+        self.resume(game)
+
+
 
 
 

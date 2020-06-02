@@ -6,7 +6,7 @@ from _thread import start_new_thread
 
 # developer note: player must be imported from before game_file to avoid circular importing
 from player import CaptainState, FirstMateState
-from game_file import Game, Surface, Power
+from game_file import Game, Surface, Power, PlantMine
 from network import send_msg, recv
 from common import ActionType
 
@@ -89,14 +89,17 @@ def threaded_client(conn, this_player_id):
                 elif data == "captain resume":
                     if game.power_in_action:
                         game.power_in_action.resume(game)
-                        game.power_in_action = None
                     current_player_state = this_player.get_state(game)
 
                 elif "captain submitted" in data:
                     action_type_submitted = int(data.split(' ')[-1])
                     if action_type_submitted == ActionType.SURFACE:
-                        if this_player.can_act():
+                        if this_player.can_act(game):
                             game.power_in_action = Surface(this_player)
+                    elif action_type_submitted == ActionType.PLANT_MINE:
+                        if this_player.submarine.can_plant_mine(game):
+                            game.power_in_action = PlantMine(this_player)
+
                     current_player_state = this_player.get_state(game)
 
                 send_msg(conn, tuple(current_player_state))

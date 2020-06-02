@@ -1,7 +1,7 @@
 import math
 import time
 import config
-from game_file import Game, Cell
+from game_file import Game, PlantMine
 
 
 class Player:
@@ -20,7 +20,7 @@ class Player:
     def get_state(self, game):
         pass
 
-    def can_act(self):
+    def can_act(self, game):
         pass
 
 
@@ -28,8 +28,9 @@ class CaptainPlayer(Player):
     def __init__(self, team, role, submarine):
         super().__init__(team, role, submarine)
 
-    def can_act(self):
-        return self.submarine.can_move
+    def can_act(self, game):
+        return self.submarine.can_move or (game.power_in_action and game.power_in_action.need_to_act_team == self.team
+                                           and game.power_in_action.is_need_to_act_captain_show_board)
 
     def get_board_string(self, game):
         board_str = ""
@@ -39,28 +40,36 @@ class CaptainPlayer(Player):
                     board_str += "b" # submarine location is marked b for black
                 elif (i, j) in self.submarine.path:
                     board_str += "r"  # submarine past locations are marked r for red
-                elif self.can_act() and Game.in_map((i, j)) and not game.board[i][j].is_island and (i, j) not in self.submarine.path and math.hypot(i - self.submarine.loc[0], j - self.submarine.loc[1]) == 1:
+                elif (i, j) in self.submarine.mines:
+                    board_str += "g"  # submarine mines are marked g for green
+                elif self.can_act(game) and Game.in_map((i, j)) and not game.board[i][j].is_island and (i, j) not in self.submarine.path and math.hypot(i - self.submarine.loc[0], j - self.submarine.loc[1]) == 1:
                     board_str += "y"  # possible move loc marked y for yellow
                 else:
                     board_str += "w" # white for nothing
         return board_str
 
     def clicked(self, game, target):
-        self.move_submarine_to(game, target)
+        if game.power_in_action and game.power_in_action.need_to_act_team == self.team and \
+                game.power_in_action.is_need_to_act_captain_show_board:
+            game.power_in_action.board_target_clicked(game, target)
+        else:
+            self.move_submarine_to(game, target)
 
     def move_submarine_to(self, game, target):
-        if Game.in_map(target) and not game.board[target[0]][target[1]].is_island and target not in self.submarine.path and math.hypot(target[0] - self.submarine.loc[0], target[1] - self.submarine.loc[1]) == 1:
+        if Game.in_map(target) and not game.board[target[0]][target[1]].is_island and target not in self.submarine.path + self.submarine.mines and math.hypot(target[0] - self.submarine.loc[0], target[1] - self.submarine.loc[1]) == 1:
             self.submarine.move(target)
 
     def get_state(self, game):
         return CaptainState.from_player(self, game)
 
 
+
+
 class FirstMatePlayer(Player):
     def __init__(self, team, role, submarine):
         super().__init__(team, role, submarine)
 
-    def can_act(self):
+    def can_act(self, game):
         return not self.submarine.is_first_mate_check
 
     def get_powers_charges(self):
@@ -85,18 +94,18 @@ class EngineerPlayer(Player):
     def __init__(self, team, role, submarine):
         super().__init__(team, role, submarine)
 
-    def can_act(self):
+    def can_act(self, game):
         return not self.submarine.is_engineer_check
 
     def get_state(self, game):
         return EngineerState.from_player(self, game)
 
-    def get_tools_state(self):
+    def get_tools_state(self, game):
         tools_state = []
         for tool in self.submarine.tools:
             if tool.is_broken:
                 tools_state.append((tool.cords, "r"))
-            elif self.can_act() and tool.direction == self.submarine.last_move_direction:
+            elif self.can_act(game) and tool.direction == self.submarine.last_move_direction:
                 tools_state.append((tool.cords, "y"))
         return tools_state
 
@@ -119,7 +128,7 @@ class RadioOperatorPlayer(Player):
         super().__init__(team, role, submarine)
         self.submarine.engineer = self
 
-    def can_act(self):
+    def can_act(self, game):
         return True
 
     def get_state(self, game):
@@ -133,7 +142,7 @@ class State:
 
     @classmethod
     def from_player(cls, player, game):
-        return cls(player.can_act(), game.is_stopped or bool(player.submarine.surfacing))
+        return cls(player.can_act(game), game.is_stopped or bool(player.submarine.surfacing))
 
     def __eq__(self, other):
         return tuple(self) == tuple(other)
@@ -174,7 +183,7 @@ class EngineerState(State):
     @classmethod
     def from_player(cls, player, game):
         state = State.from_player(player, game)
-        return cls(state.can_act, state.is_game_stopped, player.get_tools_state())
+        return cls(state.can_act, state.is_game_stopped, player.get_tools_state(game))
     
 
 class RadioOperatorState(State):
