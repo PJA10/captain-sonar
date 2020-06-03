@@ -1,3 +1,4 @@
+
 import config
 import player
 import submarine
@@ -191,6 +192,24 @@ class Drone(Power):
         else:
             self.other_captain_msg += "- did'nt find you"
             self.activated_captain_msg = f"enemy not in section {target_section}"
+
+class Sonar(Power):
+    def __init__(self, activated_captain):
+        super().__init__(activated_captain, ActionType.SONAR)
+        self.need_to_act_team = Game.reverse_team(self.need_to_act_team)
+        self.is_need_to_act_captain_show_stop_menu = False
+        self.is_need_to_act_captain_can_resume = False
+        self.is_need_to_act_captain_show_board = False
+        self.activated_captain_msg = "waiting fot other captain answer"
+
+    def answer_accepted(self, game, answer_data):
+        formatted_answer = self.activated_captain.submarine.format_sonar_answer(game, answer_data)
+        self.activated_captain_msg = formatted_answer
+        self.need_to_act_team = Game.reverse_team(self.need_to_act_team)
+        self.is_need_to_act_captain_show_stop_menu = False
+        self.is_need_to_act_captain_can_resume = True
+        self.is_need_to_act_captain_show_board = False
+
 
 class Cell:
     def __init__(self, row, col, is_island=False):

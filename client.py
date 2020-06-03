@@ -339,8 +339,6 @@ class CaptainClient(PlayerClient):
         elif self.state.is_game_stopped and PlayerClient.is_rect_clicked(self.resume_button, self.clicked_locations):
             self.resume_game_clicked()
 
-
-
     def draw(self):
         if not self.state.is_game_stopped:
             # draw stop button
@@ -368,6 +366,27 @@ class CaptainClient(PlayerClient):
             self.stop_screen_menu.enable()
             self.stop_screen_menu.mainloop(self.screen, bgfun=self.update_stop_screen)
 
+        elif self.state.power_in_action and self.state.power_in_action.need_to_act_team == self.my_team \
+            and self.state.power_in_action.action_type == ActionType.SONAR \
+                and not self.state.power_in_action.is_need_to_act_captain_show_stop_menu \
+                and not self.state.power_in_action.is_need_to_act_captain_show_board \
+                and not self.state.power_in_action.is_need_to_act_captain_can_resume:
+            sonar_menu = pygame_menu.Menu(SCREEN_HEIGHT,
+                                                     SCREEN_WIDTH,
+                                                     'sonar',
+                                                     theme=MY_THEME)
+            true_statement_selector = sonar_menu.add_selector('true statement:',
+                                                                      [('row', 'row'), ('col', 'col'),
+                                                                       ('section', 'section')])
+            false_statement_type_selector = sonar_menu.add_selector('false statement type:',
+                                                                    [('row', 'row'), ('col', 'col'),
+                                                                     ('section', 'section')])
+            false_statement_data_text_input = sonar_menu.add_text_input('false statement data: ', maxchar=7)
+            sonar_menu.add_button('send', self.send_sonar_statement, true_statement_selector, false_statement_type_selector,
+                                             false_statement_data_text_input, sonar_menu)
+            sonar_menu.enable()
+            sonar_menu.mainloop(self.screen)
+
         else:
             self.screen.fill(Color.BLACK)
             msg = "stopped"
@@ -385,6 +404,16 @@ class CaptainClient(PlayerClient):
                                      self.resume_button.x + self.resume_button.width // 2,
                                      self.resume_button.y + self.resume_button.height // 2,
                                      self.resume_button.width // 4)
+
+    def send_sonar_statement(self, true_statement_selector, false_statement_type_selector, false_statement_data_text_input, sonar_menu):
+        if true_statement_selector.get_value() == false_statement_type_selector.get_value():
+            return
+        self.update_state(self.send_action_to_server("captain sonar answer",
+                                                     (true_statement_selector.get_value()[0],
+                                                      false_statement_type_selector.get_value()[0],
+                                                      false_statement_data_text_input.get_value()[0])))
+        sonar_menu.disable()
+
 
     def update_stop_screen(self):
         if not self.state.is_game_stopped or not(self.state.power_in_action and

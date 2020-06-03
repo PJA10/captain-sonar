@@ -1,4 +1,5 @@
 import math
+import random
 import game_file
 
 EXPLOSION_SIZE = 2
@@ -236,6 +237,34 @@ class Submarine:
     def activate_drone(self, game, target_section):
         enemy_loc = self.get_enemy_submarine(game).loc
         return target_section == game.board[enemy_loc[0]][enemy_loc[1]].section
+
+    def format_sonar_answer(self, game, answer_data):
+        true_statement_type, false_statement_type, false_statement_data = answer_data
+
+        if true_statement_type == "row":
+            row = self.get_enemy_submarine(game).loc[0]
+            true_answer = f"{true_statement_type}: {row}"
+        elif true_statement_type == "col":
+            col = self.get_enemy_submarine(game).loc[1]
+            true_answer = f"{true_statement_type}: {col}"
+        else:
+            enemy_loc = self.get_enemy_submarine(game).loc
+            section = game.board[enemy_loc[0]][enemy_loc[1]].section
+            true_answer = f"{true_statement_type}: {section}"
+        false_answer = f"{false_statement_type}: {false_statement_data}"
+
+        if random.randint(0, 1) == 1:
+            return true_answer + " " + false_answer
+        else:
+            return false_answer + " " + true_answer
+
+    def can_sonar(self):
+        if self.sonar_action.charge != self.sonar_action.max_charge:
+            return False
+        for tool in self.tools:
+            if tool.type == "intelligence" and tool.is_broken:
+                return False
+        return False
 
 class PowerAction:
     def __init__(self, name, type, max_charge):
