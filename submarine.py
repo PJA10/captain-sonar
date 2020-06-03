@@ -1,11 +1,12 @@
+import math
 import game_file
+
+EXPLOSION_SIZE = 2
 
 class Submarine:
     direction_dict = {"N": (-1, 0), "E": (0, 1), "S": (1, 0), "W": (0, -1)}
 
     def __init__(self, team):
-        self.mine_charge, self.torpedo_charge, self.sonar_charge, self.drone_charge, self.silance_charnge = \
-            0, 0, 0, 0, 0
         self.mines = []
         self.loc = (0,0)
         self.path = [self.loc]
@@ -134,6 +135,44 @@ class Submarine:
         self.mines.append(target)
         self.mine_action.charge = 0
 
+    def can_fire_torpedo(self):
+        if self.torpedo_action.charge != self.torpedo_action.max_charge:
+            return False
+        for tool in self.tools:
+            if tool.type == "weapon" and tool.is_broken:
+                return False
+        return True
+
+    def fire_torpedo(self, game, target):
+        old_enemy_hp = self.get_enemy_submarine(game).hp
+        self.bomb(game, target)
+        self.torpedo_action.charge = 0
+        return old_enemy_hp - self.get_enemy_submarine(game).hp
+
+    def bomb(self, game, bomb_cords):
+        enemy_submarine = self.get_enemy_submarine(game)
+        if self.loc == bomb_cords:
+            self.hp = max(self.hp -2, 0)
+        elif math.hypot(self.loc[0] - bomb_cords[0], self.loc[1] - bomb_cords[1]) < EXPLOSION_SIZE:
+            self.hp = max(self.hp - 1, 0)
+        if enemy_submarine.loc == bomb_cords:
+            enemy_submarine.hp = max(enemy_submarine.hp -2, 0)
+        elif math.hypot(enemy_submarine.loc[0] - bomb_cords[0], enemy_submarine.loc[1] - bomb_cords[1]) < EXPLOSION_SIZE:
+            enemy_submarine.hp = max(enemy_submarine.hp - 1, 0)
+
+        mines_in_explosion_size = []
+        for mine in self.mines[:]:
+            if math.hypot(mine[0] - bomb_cords[0], mine[1] - bomb_cords[1]) < EXPLOSION_SIZE:
+                mines_in_explosion_size.append(mine)
+                self.mines.remove(mine)
+
+        for mine in enemy_submarine.mines[:]:
+            if math.hypot(mine[0] - bomb_cords[0], mine[1] - bomb_cords[1]) < EXPLOSION_SIZE:
+                mines_in_explosion_size.append(mine)
+                enemy_submarine.mines.remove(mine)
+
+        for mine in mines_in_explosion_size:
+            self.bomb(game, mine)
 
 
 class PowerAction:

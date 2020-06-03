@@ -33,6 +33,25 @@ class Game:
         self.players.append(new_player)
         return new_player
 
+    def bfs(self, start_loc, max_range):
+        q = [start_loc]
+        visited = [start_loc]
+        cords_in_range = []
+        while q:
+            curr = q.pop(0)
+            if abs(curr[0] - start_loc[0]) + abs(curr[1] - start_loc[1]) > max_range \
+                    or self.board[curr[0]][curr[1]].is_island:
+                continue
+            else:
+                cords_in_range.append(curr)
+            for direction_cord in submarine.Submarine.direction_dict.values():
+                neighbor = curr[0] + direction_cord[0], curr[1] + direction_cord[1]
+                if neighbor not in visited:
+                    visited.append(neighbor)
+                    q.append(neighbor)
+
+        return cords_in_range
+
     @staticmethod
     def is_island_in_alpha_map(row, col):
         return (row, col) in [(1,2), (1,6), (1,12), (1,13), (2,2), (2,8), (2,12), (3,8), (6,1), (7,1), (6,3), (7,3), (8,3), (6,6), (7,6), (8,7), (6,8), (8,11), (8,12), (8,13), (12,0), (10,3), (11,2), (13,2), (14,3), (11,7), (13,6), (13,8), (11,11), (12,12), (13,13)]
@@ -58,6 +77,17 @@ class Power:
         self.is_need_to_act_captain_can_resume = is_need_to_act_captain_can_resume
         self.activated_captain_msg = ""
         self.other_captain_msg = "waiting for other captain"
+
+    def __eq__(self, other):
+        return (other
+                and self.activated_captain == other.activated_captain
+                and self.action_type == other.action_type
+                and self.need_to_act_team == other.need_to_act_team
+                and self.is_need_to_act_captain_show_stop_menu == other.is_need_to_act_captain_show_stop_menu
+                and self.is_need_to_act_captain_show_board == other.is_need_to_act_captain_show_board
+                and self.is_need_to_act_captain_can_resume == other.is_need_to_act_captain_can_resume
+                and self.activated_captain_msg == other.activated_captain_msg
+                and self.other_captain_msg == other.other_captain_msg)
 
     @staticmethod
     def resume(game):
@@ -94,15 +124,29 @@ class PlantMine(Power):
         self.resume(game)
 
 
+class Torpedo(Power):
+    def __init__(self, activated_captain):
+        super().__init__(activated_captain, ActionType.TORPEDO)
+        self.is_need_to_act_captain_show_stop_menu = False
+        self.is_need_to_act_captain_can_resume = False
+        self.is_need_to_act_captain_show_board = True
+        self.other_captain_msg = "enemy captain firing a torpedo"
 
-
+    def board_target_clicked(self, game, target):
+        hp_lost = self.activated_captain.submarine.fire_torpedo(game, target)
+        self.need_to_act_team = Game.reverse_team(self.need_to_act_team)
+        self.is_need_to_act_captain_show_stop_menu = False
+        self.is_need_to_act_captain_show_board = False
+        self.is_need_to_act_captain_can_resume = True
+        self.activated_captain_msg = "waiting for other captain"
+        self.other_captain_msg = f"enemy fired torpedo to {target} lost {hp_lost} hp"
 
 class Cell:
     def __init__(self, row, col, is_island=False):
         self.row = row
         self.col = col
         self.is_island = is_island
-        self.mines = []
+        #self.mines = []
         self.section = self.get_cords_section(self.row, self.col)
 
     @staticmethod

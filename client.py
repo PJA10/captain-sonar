@@ -9,6 +9,7 @@ from common import Color, PlayerRole, Team, DrawingTool, ActionType
 from config import BOARD_HEIGHT, BOARD_WIDTH
 
 
+
 # globals
 SCREEN_HEIGHT = 720
 SCREEN_WIDTH = 1280
@@ -21,6 +22,8 @@ POWER_COLS = 3
 
 TOOL_ROWS = 3
 TOOL_COLS = 12
+
+MAX_HP = 4
 
 MY_THEME = pygame_menu.themes.THEME_SOLARIZED.copy()
 MY_THEME.widget_font = pygame_menu.font.FONT_OPEN_SANS_BOLD
@@ -474,6 +477,8 @@ class FirstMateClient(PlayerClient):
 
     def draw(self):
         self.draw_charge_bars()
+        for i in range(MAX_HP - self.state.hp):
+            pygame.draw.rect(self.screen, Color.RED, [903 + 79*i,90, 74, 30])
 
     def draw_charge_bars(self):
         """

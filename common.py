@@ -1,7 +1,7 @@
 from enum import IntEnum
 
 
-class ActionType():
+class ActionType:
     SURFACE = 0
     TORPEDO = 1
     PLANT_MINE = 2
