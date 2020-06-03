@@ -728,6 +728,7 @@ def start_game(network, screen, team_selector, role_selector, start_game_menu):
     server_response = network.send(role_pick)
 
     if server_response == "role accepted":   # role was accepted, play as the role
+        start_game_menu.disable()
         play_role(network, screen, role_pick)
 
     elif server_response == "role taken":    # role is taken, notify user
