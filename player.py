@@ -77,6 +77,16 @@ class CaptainPlayer(Player):
                         else:
                             board_str += "w" # white for nothing
 
+            elif game.power_in_action.action_type == ActionType.DRONE:
+                for i in range(config.BOARD_WIDTH):
+                    for j in range(config.BOARD_HEIGHT):
+                        if (i, j) == self.submarine.loc:
+                            board_str += "b" # submarine location is marked b for black
+                        elif (i-2)%5 == 0 and (j-2)%5 == 0:
+                            board_str += "y"  # possible move loc marked y for yellow
+                        else:
+                            board_str += "w" # white for nothing
+
         if board_str == "":
             for i in range(config.BOARD_WIDTH):
                 for j in range(config.BOARD_HEIGHT):

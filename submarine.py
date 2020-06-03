@@ -225,6 +225,18 @@ class Submarine:
 
         self.last_move_direction = str(int(self.last_move_direction.split(' ')[0]) + 1) + " - Silence"
 
+    def can_drone(self):
+        if self.drone_action.charge != self.drone_action.max_charge:
+            return False
+        for tool in self.tools:
+            if tool.type == "intelligence" and tool.is_broken:
+                return False
+        return False
+
+    def activate_drone(self, game, target_section):
+        enemy_loc = self.get_enemy_submarine(game).loc
+        return target_section == game.board[enemy_loc[0]][enemy_loc[1]].section
+
 class PowerAction:
     def __init__(self, name, type, max_charge):
         self.type = type

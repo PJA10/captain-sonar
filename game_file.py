@@ -170,6 +170,28 @@ class Silence(Power):
         self.activated_captain.submarine.silence_move_to(target)
         self.resume(game)
 
+class Drone(Power):
+    def __init__(self, activated_captain):
+        super().__init__(activated_captain, ActionType.DRONE)
+        self.is_need_to_act_captain_show_stop_menu = False
+        self.is_need_to_act_captain_can_resume = False
+        self.is_need_to_act_captain_show_board = True
+        self.other_captain_msg = "enemy captain activating drone"
+
+    def board_target_clicked(self, game, target):
+        target_section = game.board[target[0]][target[1]].section
+        is_enemy_detected = self.activated_captain.submarine.activate_drone(game, target_section)
+        self.is_need_to_act_captain_show_stop_menu = False
+        self.is_need_to_act_captain_can_resume = True
+        self.is_need_to_act_captain_show_board = False
+        self.other_captain_msg = f"enemy captain activated drone to {target_section}"
+        if is_enemy_detected:
+            self.other_captain_msg += "- found you"
+            self.activated_captain_msg = f"enemy in section {target_section}"
+        else:
+            self.other_captain_msg += "- did'nt find you"
+            self.activated_captain_msg = f"enemy not in section {target_section}"
+
 class Cell:
     def __init__(self, row, col, is_island=False):
         self.row = row
@@ -180,4 +202,4 @@ class Cell:
 
     @staticmethod
     def get_cords_section(row, col):
-        return (1+ col % 5) + 3 * (row % 5)
+        return (1+ col // 5) + 3 * (row // 5)
