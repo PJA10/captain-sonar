@@ -94,6 +94,10 @@ class Power:
     def resume(game):
         game.is_stopped = False
         game.power_in_action = None
+        for curr_submarine in game.submarines:
+            if curr_submarine.surfacing:
+                curr_submarine.surfacing = time.time()
+
 
 
 class Surface(Power):
@@ -158,6 +162,7 @@ class Torpedo(Power):
         self.is_need_to_act_captain_can_resume = True
         self.activated_captain_msg = "waiting for other captain"
         self.other_captain_msg = f"enemy fired torpedo to {target} - lost {hp_lost} hp"
+        #TODO: inform the captains is mines have exploded
 
 class Silence(Power):
     def __init__(self, activated_captain):

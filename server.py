@@ -8,9 +8,8 @@ from _thread import start_new_thread
 from player import CaptainState, FirstMateState
 from game_file import Game, Surface, Power, PlantMine, Torpedo, ActivateMine, Silence, Drone, Sonar
 from network import send_msg, recv
-from common import ActionType
+from common import ActionType, SURFACE_DURATION
 
-SURFACE_DURATION = 10
 
 server = "127.0.0.1"
 port = 7777
@@ -62,10 +61,10 @@ def threaded_client(conn, this_player_id):
     current_player_state = this_player.get_state(game)
     while this_player:
         try:
-            # TODO: stop the timer while game in stop
-            if this_player.submarine.surfacing:
-                if time.time() > this_player.submarine.surfacing + SURFACE_DURATION:
+            if this_player.submarine.surfacing and not game.is_stopped:
+                if time.time() > this_player.submarine.surfacing + this_player.submarine.surface_duration:
                     this_player.submarine.surfacing = False
+                    this_player.submarine.surface_duration = SURFACE_DURATION
 
             data = recv(conn, blocking=False)
 
@@ -84,6 +83,9 @@ def threaded_client(conn, this_player_id):
                     if not game.power_in_action:
                         game.power_in_action = Power(this_player)
                         game.is_stopped = True
+                        for submarine in game.submarines:
+                            if submarine.surfacing:
+                                submarine.surface_duration = submarine.surface_duration - (time.time() - submarine.surfacing)
                     current_player_state = this_player.get_state(game)
 
                 elif data == "captain resume":

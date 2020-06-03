@@ -1,5 +1,6 @@
 import math
 import random
+from common import SURFACE_DURATION
 import game_file
 
 EXPLOSION_SIZE = 2
@@ -52,6 +53,7 @@ class Submarine:
                       Tool("intelligence", (2, 10), "E"),
                       Tool("radioactive", (2, 11), "E")]
         self.surfacing = False
+        self.surface_duration = SURFACE_DURATION
 
     def move(self, target):
         move_d_row = target[0] - self.loc[0]

@@ -1,5 +1,6 @@
 from enum import IntEnum
 
+SURFACE_DURATION = 10
 
 class ActionType:
     SURFACE = 0
