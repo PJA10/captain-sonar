@@ -2,6 +2,7 @@ import math
 import game_file
 
 EXPLOSION_SIZE = 2
+MAX_SILENCE_LENGTH = 4
 
 class Submarine:
     direction_dict = {"N": (-1, 0), "E": (0, 1), "S": (1, 0), "W": (0, -1)}
@@ -23,7 +24,7 @@ class Submarine:
         self.can_move = True
         self.is_first_mate_check = True
         self.is_engineer_check = True
-        self.last_move_direction = "NA"
+        self.last_move_direction = "0 - NA"
         self.chains = {"yellow": Chain("yellow"), "orange": Chain("orange"), "silver": Chain("silver")}
         self.tools = [Tool("weapon", (0,0), "W", self.chains["yellow"]),
                       Tool("special", (0,1), "W", self.chains["yellow"]),
@@ -56,7 +57,7 @@ class Submarine:
         move_d_col = target[1] - self.loc[1]
         for direction_name, direction_cords in self.direction_dict.items():
             if direction_cords == (move_d_row, move_d_col):
-                self.last_move_direction = direction_name
+                self.last_move_direction = str(int(self.last_move_direction.split(' ')[0]) + 1) + " - " + direction_name
                 break
         else:
             print("error in Submarine.move, direction not found")
@@ -174,6 +175,55 @@ class Submarine:
         for mine in mines_in_explosion_size:
             self.bomb(game, mine)
 
+    def can_activate_mine(self):
+        if self.mine_action.charge != self.mine_action.max_charge:
+            return False
+        for tool in self.tools:
+            if tool.type == "weapon" and tool.is_broken:
+                return False
+        if not self.mines:
+            return False
+
+        return True
+
+    def activate_mine(self, game, target):
+        old_enemy_hp = self.get_enemy_submarine(game).hp
+        if target in self.mines:
+            self.mines.remove(target)
+            self.bomb(game, target)
+            self.mine_action.charge = 0
+        return old_enemy_hp - self.get_enemy_submarine(game).hp
+
+    def get_possible_silence_cords(self, game):
+        possible_silence_cords = []
+        for direction_cords in self.direction_dict.values():
+            for i in range(MAX_SILENCE_LENGTH):
+                curr_cord = direction_cords[0] * (i + 1) + self.loc[0], direction_cords[1] * (i + 1) + self.loc[1]
+                if not game.in_map(curr_cord) or game.board[curr_cord[0]][curr_cord[1]].is_island or curr_cord in self.path:
+                    break
+                possible_silence_cords.append(curr_cord)
+
+        return possible_silence_cords
+
+    def can_silence(self, game):
+        if self.silence_action.charge != self.silence_action.max_charge:
+            return False
+        for tool in self.tools:
+            if tool.type == "special" and tool.is_broken:
+                return False
+        if not self.get_possible_silence_cords(game):
+            return False
+        return False
+
+    def silence_move_to(self, target):
+        direction_cords = (target[0] - self.loc[0]) // max(abs(target[0] - self.loc[0]), 1) ,\
+                          (target[1] - self.loc[1]) // max(abs(target[1] - self.loc[1]), 1)
+
+        while self.loc != target:
+            self.loc = self.loc[0] + direction_cords[0], self.loc[1] + direction_cords[1]
+            self.path.append(self.loc)
+
+        self.last_move_direction = str(int(self.last_move_direction.split(' ')[0]) + 1) + " - Silence"
 
 class PowerAction:
     def __init__(self, name, type, max_charge):

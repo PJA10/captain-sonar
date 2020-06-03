@@ -40,21 +40,44 @@ class CaptainPlayer(Player):
     def get_board_string(self, game):
         board_str = ""
 
-        if (game.power_in_action and game.power_in_action.need_to_act_team == self.team
-                and game.power_in_action.is_need_to_act_captain_show_board
-                and game.power_in_action.action_type == ActionType.TORPEDO):
-            possible_torpedo_targets = game.bfs(self.submarine.loc, TORPEDO_RANGE)
-            for i in range(config.BOARD_WIDTH):
-                for j in range(config.BOARD_HEIGHT):
-                    if (i, j) == self.submarine.loc:
-                        board_str += "b" # submarine location is marked b for black
-                    elif (i, j) in self.submarine.mines:
-                        board_str += "g"  # submarine mines are marked g for green
-                    elif (i, j) in possible_torpedo_targets:
-                        board_str += "y"  # possible move loc marked y for yellow
-                    else:
-                        board_str += "w" # white for nothing
-        else:
+        if game.power_in_action and game.power_in_action.need_to_act_team == self.team \
+                and game.power_in_action.is_need_to_act_captain_show_board:
+
+            if game.power_in_action.action_type == ActionType.TORPEDO:
+                possible_torpedo_targets = game.bfs(self.submarine.loc, TORPEDO_RANGE)
+                for i in range(config.BOARD_WIDTH):
+                    for j in range(config.BOARD_HEIGHT):
+                        if (i, j) == self.submarine.loc:
+                            board_str += "b" # submarine location is marked b for black
+                        elif (i, j) in self.submarine.mines:
+                            board_str += "g"  # submarine mines are marked g for green
+                        elif (i, j) in possible_torpedo_targets:
+                            board_str += "y"  # possible move loc marked y for yellow
+                        else:
+                            board_str += "w" # white for nothing
+
+            elif game.power_in_action.action_type == ActionType.ACTIVATE_MINE:
+                for i in range(config.BOARD_WIDTH):
+                    for j in range(config.BOARD_HEIGHT):
+                        if (i, j) == self.submarine.loc:
+                            board_str += "b" # submarine location is marked b for black
+                        elif (i, j) in self.submarine.mines:
+                            board_str += "y"  # possible move loc marked y for yellow
+                        else:
+                            board_str += "w" # white for nothing
+
+            elif game.power_in_action.action_type == ActionType.SILENCE:
+                possible_silence_cords = self.submarine.get_possible_silence_cords(game)
+                for i in range(config.BOARD_WIDTH):
+                    for j in range(config.BOARD_HEIGHT):
+                        if (i, j) == self.submarine.loc:
+                            board_str += "b" # submarine location is marked b for black
+                        elif (i, j) in possible_silence_cords:
+                            board_str += "y"  # possible move loc marked y for yellow
+                        else:
+                            board_str += "w" # white for nothing
+
+        if board_str == "":
             for i in range(config.BOARD_WIDTH):
                 for j in range(config.BOARD_HEIGHT):
                     if (i, j) == self.submarine.loc:
@@ -63,7 +86,9 @@ class CaptainPlayer(Player):
                         board_str += "r"  # submarine past locations are marked r for red
                     elif (i, j) in self.submarine.mines:
                         board_str += "g"  # submarine mines are marked g for green
-                    elif self.can_act(game) and Game.in_map((i, j)) and not game.board[i][j].is_island and (i, j) not in self.submarine.path and math.hypot(i - self.submarine.loc[0], j - self.submarine.loc[1]) == 1:
+                    elif self.can_act(game) and Game.in_map((i, j)) and not game.board[i][j].is_island \
+                            and (i, j) not in self.submarine.path \
+                            and math.hypot(i - self.submarine.loc[0], j - self.submarine.loc[1]) == 1:
                         board_str += "y"  # possible move loc marked y for yellow
                     else:
                         board_str += "w" # white for nothing
@@ -215,5 +240,5 @@ class RadioOperatorState(State):
     def from_player(cls, player, game):
         state = State.from_player(player, game)
         enemy_submarine = player.submarine.get_enemy_submarine(game)
-        last_enemy_move_direction = f"{len(enemy_submarine.path)}. " + enemy_submarine.last_move_direction
+        last_enemy_move_direction = enemy_submarine.last_move_direction
         return cls(state.can_act, state.is_game_stopped, last_enemy_move_direction)

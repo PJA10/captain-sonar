@@ -123,6 +123,23 @@ class PlantMine(Power):
         self.activated_captain.submarine.plant_mine(target)
         self.resume(game)
 
+class ActivateMine(Power):
+    def __init__(self, activated_captain):
+        super().__init__(activated_captain, ActionType.ACTIVATE_MINE)
+        self.is_need_to_act_captain_show_stop_menu = False
+        self.is_need_to_act_captain_can_resume = False
+        self.is_need_to_act_captain_show_board = True
+        self.other_captain_msg = "enemy captain activating a mine"
+
+    def board_target_clicked(self, game, target):
+        hp_lost = self.activated_captain.submarine.activate_mine(game, target)
+        self.need_to_act_team = Game.reverse_team(self.need_to_act_team)
+        self.is_need_to_act_captain_show_stop_menu = False
+        self.is_need_to_act_captain_show_board = False
+        self.is_need_to_act_captain_can_resume = True
+        self.activated_captain_msg = "waiting for other captain"
+        self.other_captain_msg = f"enemy activated mine at {target} - lost {hp_lost} hp"
+
 
 class Torpedo(Power):
     def __init__(self, activated_captain):
@@ -139,7 +156,19 @@ class Torpedo(Power):
         self.is_need_to_act_captain_show_board = False
         self.is_need_to_act_captain_can_resume = True
         self.activated_captain_msg = "waiting for other captain"
-        self.other_captain_msg = f"enemy fired torpedo to {target} lost {hp_lost} hp"
+        self.other_captain_msg = f"enemy fired torpedo to {target} - lost {hp_lost} hp"
+
+class Silence(Power):
+    def __init__(self, activated_captain):
+        super().__init__(activated_captain, ActionType.SILENCE)
+        self.is_need_to_act_captain_show_stop_menu = False
+        self.is_need_to_act_captain_can_resume = False
+        self.is_need_to_act_captain_show_board = True
+        self.other_captain_msg = "enemy captain silencing"
+
+    def board_target_clicked(self, game, target):
+        self.activated_captain.submarine.silence_move_to(target)
+        self.resume(game)
 
 class Cell:
     def __init__(self, row, col, is_island=False):
