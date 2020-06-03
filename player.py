@@ -160,7 +160,7 @@ class EngineerPlayer(Player):
         for tool in self.submarine.tools:
             if tool.is_broken:
                 tools_state.append((tool.cords, "r"))
-            elif self.can_act(game) and tool.direction == self.submarine.last_move_direction:
+            elif self.can_act(game) and tool.direction == self.submarine.last_move_direction.split(' ')[-1]:
                 tools_state.append((tool.cords, "y"))
         return tools_state
 
@@ -173,7 +173,8 @@ class EngineerPlayer(Player):
             if tool.cords == tool_to_brake_cords:
                 tool_to_brake = tool
                 break
-        if tool_to_brake and not tool_to_brake.is_broken and tool_to_brake.direction == self.submarine.last_move_direction:
+        if tool_to_brake and not tool_to_brake.is_broken \
+                and tool_to_brake.direction == self.submarine.last_move_direction.split(' ')[-1]:
             self.submarine.brake_tool(tool_to_brake)
             self.submarine.engineer_check()
 

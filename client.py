@@ -411,7 +411,7 @@ class CaptainClient(PlayerClient):
         self.update_state(self.send_action_to_server("captain sonar answer",
                                                      (true_statement_selector.get_value()[0],
                                                       false_statement_type_selector.get_value()[0],
-                                                      false_statement_data_text_input.get_value()[0])))
+                                                      false_statement_data_text_input.get_value())))
         sonar_menu.disable()
 
 

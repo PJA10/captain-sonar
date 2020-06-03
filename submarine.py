@@ -214,7 +214,7 @@ class Submarine:
                 return False
         if not self.get_possible_silence_cords(game):
             return False
-        return False
+        return True
 
     def silence_move_to(self, target):
         direction_cords = (target[0] - self.loc[0]) // max(abs(target[0] - self.loc[0]), 1) ,\
@@ -232,13 +232,14 @@ class Submarine:
         for tool in self.tools:
             if tool.type == "intelligence" and tool.is_broken:
                 return False
-        return False
+        return True
 
     def activate_drone(self, game, target_section):
         enemy_loc = self.get_enemy_submarine(game).loc
         return target_section == game.board[enemy_loc[0]][enemy_loc[1]].section
 
     def format_sonar_answer(self, game, answer_data):
+        self.sonar_action.charge = 0
         true_statement_type, false_statement_type, false_statement_data = answer_data
 
         if true_statement_type == "row":
@@ -264,7 +265,7 @@ class Submarine:
         for tool in self.tools:
             if tool.type == "intelligence" and tool.is_broken:
                 return False
-        return False
+        return True
 
 class PowerAction:
     def __init__(self, name, type, max_charge):
