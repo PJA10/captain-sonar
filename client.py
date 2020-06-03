@@ -339,12 +339,13 @@ class CaptainClient(PlayerClient):
 
 
     def draw(self):
-        # draw stop button
-        pygame.draw.rect(self.screen, Color.BLACK, self.stop_button)
-        self.display_message("stop",
-                             self.stop_button.x + self.stop_button.width // 2,
-                             self.stop_button.y + self.stop_button.height // 2,
-                             self.stop_button.width // 3)
+        if not self.state.is_game_stopped:
+            # draw stop button
+            pygame.draw.rect(self.screen, Color.BLACK, self.stop_button)
+            self.display_message("stop",
+                                 self.stop_button.x + self.stop_button.width // 2,
+                                 self.stop_button.y + self.stop_button.height // 2,
+                                 self.stop_button.width // 3)
 
         self.draw_captain_board()
 

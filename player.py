@@ -64,7 +64,6 @@ class CaptainPlayer(Player):
 
 
 
-
 class FirstMatePlayer(Player):
     def __init__(self, team, role, submarine):
         super().__init__(team, role, submarine)
