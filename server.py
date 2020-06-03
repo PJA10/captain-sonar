@@ -6,7 +6,7 @@ from _thread import start_new_thread
 
 # developer note: player must be imported from before game_file to avoid circular importing
 from player import CaptainState, FirstMateState
-from game_file import Game, Surface, Power, PlantMine, Torpedo, ActivateMine, Silence, Drone, Sonar
+from game_file import Game, Power
 from network import send_msg, recv
 from common import ActionType, SURFACE_DURATION
 
@@ -101,27 +101,7 @@ def threaded_client(conn, this_player_id):
 
                 elif "captain submitted" in data:
                     action_type_submitted = int(data.split(' ')[-1])
-                    if action_type_submitted == ActionType.SURFACE:
-                        if this_player.can_act(game):
-                            game.power_in_action = Surface(this_player)
-                    elif action_type_submitted == ActionType.PLANT_MINE:
-                        if this_player.submarine.can_plant_mine(game):
-                            game.power_in_action = PlantMine(this_player)
-                    elif action_type_submitted == ActionType.TORPEDO:
-                        if this_player.submarine.can_fire_torpedo():
-                            game.power_in_action = Torpedo(this_player)
-                    elif action_type_submitted == ActionType.ACTIVATE_MINE:
-                        if this_player.submarine.can_activate_mine():
-                            game.power_in_action = ActivateMine(this_player)
-                    elif action_type_submitted == ActionType.SILENCE:
-                        if this_player.submarine.can_silence(game):
-                            game.power_in_action = Silence(this_player)
-                    elif action_type_submitted == ActionType.DRONE:
-                        if this_player.submarine.can_drone():
-                            game.power_in_action = Drone(this_player)
-                    elif action_type_submitted == ActionType.SONAR:
-                        if this_player.submarine.can_sonar():
-                            game.power_in_action = Sonar(this_player)
+                    this_player.start_power(game, action_type_submitted)
 
                     current_player_state = this_player.get_state(game)
 

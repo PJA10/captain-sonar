@@ -1,5 +1,4 @@
 import math
-import sys
 import pygame
 import pygame_menu
 
@@ -87,7 +86,7 @@ class PlayerClient:
     Main method `play()` handles the client main loop
     Inheriting classes implements the behavior for specific role
     """
-    FPS = 60
+    FPS = 10
     game_states = "play"
     image_filename = None
 
@@ -571,6 +570,7 @@ class RadioOperatorClient(PlayerClient):
     """
     This class implements all client logic of the Radio Operator player
     """
+    FPS = 30
     image_filename = 'img/AlphaMap2.jpeg'
 
     def __init__(self, screen, network, role_pick):

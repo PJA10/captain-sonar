@@ -4,7 +4,7 @@ import time
 import copy
 
 import config
-from game_file import Game, PlantMine
+from game_file import Game, PlantMine, Torpedo, ActivateMine, Silence, Drone, Sonar, Surface
 from common import ActionType
 
 TORPEDO_RANGE = 4
@@ -117,6 +117,29 @@ class CaptainPlayer(Player):
 
     def get_state(self, game):
         return CaptainState.from_player(self, game)
+
+    def start_power(self, game, action_type_submitted):
+        if action_type_submitted == ActionType.SURFACE:
+            if self.can_act(game):
+                game.power_in_action = Surface(self)
+        elif action_type_submitted == ActionType.PLANT_MINE:
+            if self.submarine.can_plant_mine(game):
+                game.power_in_action = PlantMine(self)
+        elif action_type_submitted == ActionType.TORPEDO:
+            if self.submarine.can_fire_torpedo():
+                game.power_in_action = Torpedo(self)
+        elif action_type_submitted == ActionType.ACTIVATE_MINE:
+            if self.submarine.can_activate_mine():
+                game.power_in_action = ActivateMine(self)
+        elif action_type_submitted == ActionType.SILENCE:
+            if self.submarine.can_silence(game):
+                game.power_in_action = Silence(self)
+        elif action_type_submitted == ActionType.DRONE:
+            if self.submarine.can_drone():
+                game.power_in_action = Drone(self)
+        elif action_type_submitted == ActionType.SONAR:
+            if self.submarine.can_sonar():
+                game.power_in_action = Sonar(self)
 
 
 
