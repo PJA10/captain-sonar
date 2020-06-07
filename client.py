@@ -711,6 +711,13 @@ class RadioOperatorClient(PlayerClient):
             border_width = 2
             pygame.draw.rect(self.screen, [255, 255, 255], self.select_tool_rect, border_width)
 
+    def draw_stop_screen(self):
+        """
+        Draws a black screen for stop mode
+        """
+        self.screen.fill(Color.BLACK)
+        self.display_message("stop " + self.state.last_enemy_move_direction)
+
 
 STATE_CLASS_MAP = {
     CaptainClient: CaptainState,

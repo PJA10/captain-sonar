@@ -11,7 +11,7 @@ class Submarine:
 
     def __init__(self, team):
         self.mines = []
-        self.loc = (0,0)
+        self.loc = None
         self.path = [self.loc]
         self.tools = []
         self.chains = []
@@ -56,21 +56,25 @@ class Submarine:
         self.surface_duration = SURFACE_DURATION
 
     def move(self, target):
-        move_d_row = target[0] - self.loc[0]
-        move_d_col = target[1] - self.loc[1]
-        for direction_name, direction_cords in self.direction_dict.items():
-            if direction_cords == (move_d_row, move_d_col):
-                self.last_move_direction = str(int(self.last_move_direction.split(' ')[0]) + 1) + " - " + direction_name
-                break
+        if not self.loc:
+            self.loc = target
+            self.path.append(target)
         else:
-            print("error in Submarine.move, direction not found")
+            move_d_row = target[0] - self.loc[0]
+            move_d_col = target[1] - self.loc[1]
+            for direction_name, direction_cords in self.direction_dict.items():
+                if direction_cords == (move_d_row, move_d_col):
+                    self.last_move_direction = str(int(self.last_move_direction.split(' ')[0]) + 1) + " - " + direction_name
+                    break
+            else:
+                print("error in Submarine.move, direction not found")
 
-        self.loc = target
-        self.path.append(target)
+            self.loc = target
+            self.path.append(target)
 
-        self.can_move = False
-        self.first_mate_uncheck()
-        self.engineer_uncheck()
+            self.can_move = False
+            self.first_mate_uncheck()
+            self.engineer_uncheck()
 
     def first_mate_uncheck(self):
         self.is_first_mate_check = False
@@ -219,6 +223,7 @@ class Submarine:
         return True
 
     def silence_move_to(self, target):
+        self.silence_action.charge = 0
         direction_cords = (target[0] - self.loc[0]) // max(abs(target[0] - self.loc[0]), 1) ,\
                           (target[1] - self.loc[1]) // max(abs(target[1] - self.loc[1]), 1)
 
@@ -237,6 +242,7 @@ class Submarine:
         return True
 
     def activate_drone(self, game, target_section):
+        self.drone_action.charge = 0
         enemy_loc = self.get_enemy_submarine(game).loc
         return target_section == game.board[enemy_loc[0]][enemy_loc[1]].section
 

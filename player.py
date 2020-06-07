@@ -88,20 +88,28 @@ class CaptainPlayer(Player):
                             board_str += "w" # white for nothing
 
         if board_str == "":
-            for i in range(config.BOARD_WIDTH):
-                for j in range(config.BOARD_HEIGHT):
-                    if (i, j) == self.submarine.loc:
-                        board_str += "b" # submarine location is marked b for black
-                    elif (i, j) in self.submarine.path:
-                        board_str += "r"  # submarine past locations are marked r for red
-                    elif (i, j) in self.submarine.mines:
-                        board_str += "g"  # submarine mines are marked g for green
-                    elif self.can_act(game) and Game.in_map((i, j)) and not game.board[i][j].is_island \
-                            and (i, j) not in self.submarine.path \
-                            and math.hypot(i - self.submarine.loc[0], j - self.submarine.loc[1]) == 1:
-                        board_str += "y"  # possible move loc marked y for yellow
-                    else:
-                        board_str += "w" # white for nothing
+            if not self.submarine.loc:
+                for i in range(config.BOARD_WIDTH):
+                    for j in range(config.BOARD_HEIGHT):
+                        if self.can_act(game) and not game.board[i][j].is_island:
+                            board_str += "y"  # possible move loc marked y for yellow
+                        else:
+                            board_str += "w" # white for nothing
+            else:
+                for i in range(config.BOARD_WIDTH):
+                    for j in range(config.BOARD_HEIGHT):
+                        if (i, j) == self.submarine.loc:
+                            board_str += "b" # submarine location is marked b for black
+                        elif (i, j) in self.submarine.path:
+                            board_str += "r"  # submarine past locations are marked r for red
+                        elif (i, j) in self.submarine.mines:
+                            board_str += "g"  # submarine mines are marked g for green
+                        elif self.can_act(game) and Game.in_map((i, j)) and not game.board[i][j].is_island \
+                                and (i, j) not in self.submarine.path \
+                                and math.hypot(i - self.submarine.loc[0], j - self.submarine.loc[1]) == 1:
+                            board_str += "y"  # possible move loc marked y for yellow
+                        else:
+                            board_str += "w" # white for nothing
         return board_str
 
     def clicked(self, game, target):
@@ -112,7 +120,7 @@ class CaptainPlayer(Player):
             self.move_submarine_to(game, target)
 
     def move_submarine_to(self, game, target):
-        if Game.in_map(target) and not game.board[target[0]][target[1]].is_island and target not in self.submarine.path + self.submarine.mines and math.hypot(target[0] - self.submarine.loc[0], target[1] - self.submarine.loc[1]) == 1:
+        if Game.in_map(target) and not game.board[target[0]][target[1]].is_island and target not in self.submarine.path + self.submarine.mines:
             self.submarine.move(target)
 
     def get_state(self, game):
