@@ -6,8 +6,10 @@ from _thread import start_new_thread
 
 # developer note: player must be imported from before game_file to avoid circular importing
 from player import CaptainState, FirstMateState
-from game_file import Game
+from game_file import Game, Power
 from network import send_msg, recv
+from common import ActionType, SURFACE_DURATION
+
 
 server = "127.0.0.1"
 port = 7777
@@ -55,10 +57,15 @@ def threaded_client(conn, this_player_id):
             this_player = game.add_new_player(this_player_team, this_player_role)
             break
 
-    # recieves and handles requests and notifications from user
+    # receives and handles requests and notifications from user
     current_player_state = this_player.get_state(game)
     while this_player:
         try:
+            if this_player.submarine.surfacing and not game.is_stopped:
+                if time.time() > this_player.submarine.surfacing + this_player.submarine.surface_duration:
+                    this_player.submarine.surfacing = False
+                    this_player.submarine.surface_duration = SURFACE_DURATION
+
             data = recv(conn, blocking=False)
 
             if data:
@@ -73,7 +80,29 @@ def threaded_client(conn, this_player_id):
 
                 # captain stuff
                 elif data == "captain stop":
-                    game.is_stopped = True
+                    if not game.power_in_action:
+                        game.power_in_action = Power(this_player)
+                        game.is_stopped = True
+                        for submarine in game.submarines:
+                            if submarine.surfacing:
+                                submarine.surface_duration = submarine.surface_duration - (time.time() - submarine.surfacing)
+                    current_player_state = this_player.get_state(game)
+
+                elif data == "captain resume":
+                    if game.power_in_action:
+                        game.power_in_action.resume(game)
+                    current_player_state = this_player.get_state(game)
+
+                elif data == "captain sonar answer":
+                    answer_data = recv(conn)
+                    if game.power_in_action and game.power_in_action.action_type == ActionType.SONAR:
+                        game.power_in_action.answer_accepted(game, answer_data)
+                    current_player_state = this_player.get_state(game)
+
+                elif "captain submitted" in data:
+                    action_type_submitted = int(data.split(' ')[-1])
+                    this_player.start_power(game, action_type_submitted)
+
                     current_player_state = this_player.get_state(game)
 
                 send_msg(conn, tuple(current_player_state))

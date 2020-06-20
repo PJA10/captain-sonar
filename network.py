@@ -52,6 +52,7 @@ def get_len(msg):
     return str(len(msg)).ljust(20)
 
 def send_msg(conn, msg):
+    print('send:', msg)
     msg_b = pickle.dumps(msg)
     len_msg = get_len(msg_b).encode('utf-8')
     conn.sendall(len_msg + msg_b)
