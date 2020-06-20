@@ -1,11 +1,17 @@
+import math
+import random
+from common import SURFACE_DURATION
+import game_file
+
+EXPLOSION_SIZE = 2
+MAX_SILENCE_LENGTH = 4
+
 class Submarine:
     direction_dict = {"N": (-1, 0), "E": (0, 1), "S": (1, 0), "W": (0, -1)}
 
     def __init__(self, team):
-        self.mine_charge, self.torpedo_charge, self.sonar_charge, self.drone_charge, self.silance_charnge = \
-            0, 0, 0, 0, 0
         self.mines = []
-        self.loc = (0,0)
+        self.loc = None
         self.path = [self.loc]
         self.tools = []
         self.chains = []
@@ -20,7 +26,7 @@ class Submarine:
         self.can_move = True
         self.is_first_mate_check = True
         self.is_engineer_check = True
-        self.last_move_direction = "NA"
+        self.last_move_direction = "0 - NA"
         self.chains = {"yellow": Chain("yellow"), "orange": Chain("orange"), "silver": Chain("silver")}
         self.tools = [Tool("weapon", (0,0), "W", self.chains["yellow"]),
                       Tool("special", (0,1), "W", self.chains["yellow"]),
@@ -46,23 +52,29 @@ class Submarine:
                       Tool("radioactive", (2, 9), "E"),
                       Tool("intelligence", (2, 10), "E"),
                       Tool("radioactive", (2, 11), "E")]
+        self.surfacing = False
+        self.surface_duration = SURFACE_DURATION
 
     def move(self, target):
-        move_d_row = target[0] - self.loc[0]
-        move_d_col = target[1] - self.loc[1]
-        for direction_name, direction_cords in self.direction_dict.items():
-            if direction_cords == (move_d_row, move_d_col):
-                self.last_move_direction = direction_name
-                break
+        if not self.loc:
+            self.loc = target
+            self.path.append(target)
         else:
-            print("error in Submarine.move, direction not found")
+            move_d_row = target[0] - self.loc[0]
+            move_d_col = target[1] - self.loc[1]
+            for direction_name, direction_cords in self.direction_dict.items():
+                if direction_cords == (move_d_row, move_d_col):
+                    self.last_move_direction = str(int(self.last_move_direction.split(' ')[0]) + 1) + " - " + direction_name
+                    break
+            else:
+                print("error in Submarine.move, direction not found")
 
-        self.loc = target
-        self.path.append(target)
+            self.loc = target
+            self.path.append(target)
 
-        self.can_move = False
-        self.first_mate_uncheck()
-        self.engineer_uncheck()
+            self.can_move = False
+            self.first_mate_uncheck()
+            self.engineer_uncheck()
 
     def first_mate_uncheck(self):
         self.is_first_mate_check = False
@@ -111,6 +123,157 @@ class Submarine:
 
     def get_enemy_submarine(self, game):
         return [submarine for submarine in game.submarines if submarine is not self][0]
+
+    def can_plant_mine(self, game):
+        if self.mine_action.charge != self.mine_action.max_charge:
+            return False
+        for tool in self.tools:
+            if tool.type == "weapon" and tool.is_broken:
+                return False
+        for direction_cords in self.direction_dict.values():
+            new_loc = self.loc[0] + direction_cords[0], self.loc[1] + direction_cords[1]
+            if game_file.Game.in_map(new_loc) and not game.board[new_loc[0]][new_loc[1]].is_island and \
+                    new_loc not in self.path + self.mines:
+                break
+        else: # if there are no possible mine locations
+            return False
+        return True
+
+    def plant_mine(self, target):
+        self.mines.append(target)
+        self.mine_action.charge = 0
+
+    def can_fire_torpedo(self):
+        if self.torpedo_action.charge != self.torpedo_action.max_charge:
+            return False
+        for tool in self.tools:
+            if tool.type == "weapon" and tool.is_broken:
+                return False
+        return True
+
+    def fire_torpedo(self, game, target):
+        old_enemy_hp = self.get_enemy_submarine(game).hp
+        self.bomb(game, target)
+        self.torpedo_action.charge = 0
+        return old_enemy_hp - self.get_enemy_submarine(game).hp
+
+    def bomb(self, game, bomb_cords):
+        enemy_submarine = self.get_enemy_submarine(game)
+        if self.loc == bomb_cords:
+            self.hp = max(self.hp -2, 0)
+        elif math.hypot(self.loc[0] - bomb_cords[0], self.loc[1] - bomb_cords[1]) < EXPLOSION_SIZE:
+            self.hp = max(self.hp - 1, 0)
+        if enemy_submarine.loc == bomb_cords:
+            enemy_submarine.hp = max(enemy_submarine.hp -2, 0)
+        elif math.hypot(enemy_submarine.loc[0] - bomb_cords[0], enemy_submarine.loc[1] - bomb_cords[1]) < EXPLOSION_SIZE:
+            enemy_submarine.hp = max(enemy_submarine.hp - 1, 0)
+
+        mines_in_explosion_size = []
+        for mine in self.mines[:]:
+            if math.hypot(mine[0] - bomb_cords[0], mine[1] - bomb_cords[1]) < EXPLOSION_SIZE:
+                mines_in_explosion_size.append(mine)
+                self.mines.remove(mine)
+
+        for mine in enemy_submarine.mines[:]:
+            if math.hypot(mine[0] - bomb_cords[0], mine[1] - bomb_cords[1]) < EXPLOSION_SIZE:
+                mines_in_explosion_size.append(mine)
+                enemy_submarine.mines.remove(mine)
+
+        for mine in mines_in_explosion_size:
+            self.bomb(game, mine)
+
+    def can_activate_mine(self):
+        if self.mine_action.charge != self.mine_action.max_charge:
+            return False
+        for tool in self.tools:
+            if tool.type == "weapon" and tool.is_broken:
+                return False
+        if not self.mines:
+            return False
+
+        return True
+
+    def activate_mine(self, game, target):
+        old_enemy_hp = self.get_enemy_submarine(game).hp
+        if target in self.mines:
+            self.mines.remove(target)
+            self.bomb(game, target)
+            self.mine_action.charge = 0
+        return old_enemy_hp - self.get_enemy_submarine(game).hp
+
+    def get_possible_silence_cords(self, game):
+        possible_silence_cords = []
+        for direction_cords in self.direction_dict.values():
+            for i in range(MAX_SILENCE_LENGTH):
+                curr_cord = direction_cords[0] * (i + 1) + self.loc[0], direction_cords[1] * (i + 1) + self.loc[1]
+                if not game.in_map(curr_cord) or game.board[curr_cord[0]][curr_cord[1]].is_island or curr_cord in self.path:
+                    break
+                possible_silence_cords.append(curr_cord)
+
+        return possible_silence_cords
+
+    def can_silence(self, game):
+        if self.silence_action.charge != self.silence_action.max_charge:
+            return False
+        for tool in self.tools:
+            if tool.type == "special" and tool.is_broken:
+                return False
+        if not self.get_possible_silence_cords(game):
+            return False
+        return True
+
+    def silence_move_to(self, target):
+        self.silence_action.charge = 0
+        direction_cords = (target[0] - self.loc[0]) // max(abs(target[0] - self.loc[0]), 1) ,\
+                          (target[1] - self.loc[1]) // max(abs(target[1] - self.loc[1]), 1)
+
+        while self.loc != target:
+            self.loc = self.loc[0] + direction_cords[0], self.loc[1] + direction_cords[1]
+            self.path.append(self.loc)
+
+        self.last_move_direction = str(int(self.last_move_direction.split(' ')[0]) + 1) + " - Silence"
+
+    def can_drone(self):
+        if self.drone_action.charge != self.drone_action.max_charge:
+            return False
+        for tool in self.tools:
+            if tool.type == "intelligence" and tool.is_broken:
+                return False
+        return True
+
+    def activate_drone(self, game, target_section):
+        self.drone_action.charge = 0
+        enemy_loc = self.get_enemy_submarine(game).loc
+        return target_section == game.board[enemy_loc[0]][enemy_loc[1]].section
+
+    def format_sonar_answer(self, game, answer_data):
+        self.sonar_action.charge = 0
+        true_statement_type, false_statement_type, false_statement_data = answer_data
+
+        if true_statement_type == "row":
+            row = self.get_enemy_submarine(game).loc[0]
+            true_answer = f"{true_statement_type}: {row}"
+        elif true_statement_type == "col":
+            col = self.get_enemy_submarine(game).loc[1]
+            true_answer = f"{true_statement_type}: {col}"
+        else:
+            enemy_loc = self.get_enemy_submarine(game).loc
+            section = game.board[enemy_loc[0]][enemy_loc[1]].section
+            true_answer = f"{true_statement_type}: {section}"
+        false_answer = f"{false_statement_type}: {false_statement_data}"
+
+        if random.randint(0, 1) == 1:
+            return true_answer + " " + false_answer
+        else:
+            return false_answer + " " + true_answer
+
+    def can_sonar(self):
+        if self.sonar_action.charge != self.sonar_action.max_charge:
+            return False
+        for tool in self.tools:
+            if tool.type == "intelligence" and tool.is_broken:
+                return False
+        return True
 
 class PowerAction:
     def __init__(self, name, type, max_charge):
